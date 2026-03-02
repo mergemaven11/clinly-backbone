@@ -1,0 +1,70 @@
+# =========================
+# Clinly Backbone - Local Dev
+# =========================
+
+services:
+
+  # =========================
+  # MongoDB (Local Dev)
+  # =========================
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    container_name: clinly-mongo
+
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASS}
+      MONGO_INITDB_DATABASE: ${MONGO_DB}
+
+    volumes:
+      - mongo_data:/data/db
+
+    ports:
+      - "27017:27017"  # Local access (Mongo Compass, etc.)
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh --quiet \"mongodb://$${MONGO_INITDB_ROOT_USERNAME}:$${MONGO_INITDB_ROOT_PASSWORD}@localhost:27017/admin\" --eval \"db.runCommand({ ping: 1 }).ok\" | grep 1"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+
+  # =========================
+  # FastAPI (Local Dev)
+  # =========================
+  api:
+    build: .
+    container_name: clinly-api
+    restart: unless-stopped
+
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+    env_file:
+      - .env
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - ./app:/app/app   # Hot reload support
+
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+
+
+# =========================
+# Named Volumes
+# =========================
+volumes:
+  mongo_data:
