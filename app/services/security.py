@@ -3,21 +3,39 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
-PASSWORD_CONTEXT = CryptContext(schemes=["bcrypt"], deprecated="auto")
 JWT_ALGORITHM = "HS256"
+BCRYPT_ROUNDS = 12
+BCRYPT_MAX_PASSWORD_BYTES = 72
+
+
+def _password_bytes(password: str) -> bytes:
+    encoded = password.encode("utf-8")
+    if len(encoded) > BCRYPT_MAX_PASSWORD_BYTES:
+        raise ValueError("password exceeds bcrypt's 72-byte limit")
+    return encoded
 
 
 def hash_password(password: str) -> str:
-    """Hash a password using bcrypt through Passlib."""
-    return PASSWORD_CONTEXT.hash(password)
+    """Hash a password with bcrypt using a fresh random salt."""
+    hashed = bcrypt.hashpw(
+        _password_bytes(password),
+        bcrypt.gensalt(rounds=BCRYPT_ROUNDS),
+    )
+    return hashed.decode("ascii")
 
 
 def verify_password(password: str, password_hash: str) -> bool:
-    """Verify a candidate password against its stored hash."""
-    return PASSWORD_CONTEXT.verify(password, password_hash)
+    """Verify a candidate password against its stored bcrypt hash."""
+    try:
+        return bcrypt.checkpw(
+            _password_bytes(password),
+            password_hash.encode("ascii"),
+        )
+    except (ValueError, UnicodeEncodeError):
+        return False
 
 
 def create_access_token(
@@ -43,11 +61,7 @@ def decode_access_token(token: str, *, secret: str) -> dict[str, Any]:
     ``JWTError`` is intentionally allowed to propagate to the auth dependency,
     which maps all invalid/expired token variants to the same public response.
     """
-    try:
-        payload = jwt.decode(token, secret, algorithms=[JWT_ALGORITHM])
-    except JWTError:
-        raise
-
+    payload = jwt.decode(token, secret, algorithms=[JWT_ALGORITHM])
     if not payload.get("sub") or not payload.get("role"):
         raise JWTError("token missing required claims")
     return payload
