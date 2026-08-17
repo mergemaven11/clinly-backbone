@@ -1,30 +1,48 @@
 from __future__ import annotations
 
-from cryptography.fernet import Fernet, InvalidToken
+import base64
+import binascii
+
+from nacl.exceptions import CryptoError
+from nacl.secret import Aead
+
+MESSAGE_AAD = b"clinly-message-v1"
 
 
 class MessageCipher:
     """Authenticated symmetric encryption for message bodies.
 
-    Fernet provides confidentiality and integrity. The key is supplied only
-    through runtime configuration and plaintext is never persisted by this
-    service.
+    PyNaCl's AEAD API uses XChaCha20-Poly1305 and generates a random extended
+    nonce by default. The URL-safe base64 key must decode to exactly 32 bytes.
+    Plaintext is never persisted by this service.
     """
 
     def __init__(self, key: str) -> None:
         try:
-            self._fernet = Fernet(key.encode("ascii"))
-        except (AttributeError, UnicodeEncodeError, ValueError) as exc:
+            raw_key = base64.urlsafe_b64decode(key.encode("ascii"))
+        except (AttributeError, UnicodeEncodeError, ValueError, binascii.Error) as exc:
             raise RuntimeError("MESSAGE_ENCRYPTION_KEY is invalid") from exc
 
+        if len(raw_key) != Aead.KEY_SIZE:
+            raise RuntimeError("MESSAGE_ENCRYPTION_KEY is invalid")
+        self._aead = Aead(raw_key)
+
     def encrypt(self, plaintext: str) -> str:
-        """Return an authenticated, URL-safe base64 ciphertext token."""
-        return self._fernet.encrypt(plaintext.encode("utf-8")).decode("ascii")
+        """Return an authenticated, nonce-containing URL-safe ciphertext."""
+        encrypted = self._aead.encrypt(plaintext.encode("utf-8"), MESSAGE_AAD)
+        return base64.urlsafe_b64encode(bytes(encrypted)).decode("ascii")
 
     def decrypt(self, ciphertext: str) -> str:
-        """Decrypt a stored token, failing closed if integrity validation fails."""
+        """Decrypt a stored token, failing closed if authentication fails."""
         try:
-            plaintext = self._fernet.decrypt(ciphertext.encode("ascii"))
-        except (InvalidToken, UnicodeEncodeError, ValueError) as exc:
+            encrypted = base64.urlsafe_b64decode(ciphertext.encode("ascii"))
+            plaintext = self._aead.decrypt(encrypted, MESSAGE_AAD)
+        except (
+            CryptoError,
+            UnicodeEncodeError,
+            UnicodeDecodeError,
+            ValueError,
+            binascii.Error,
+        ) as exc:
             raise RuntimeError("Stored message ciphertext is invalid") from exc
         return plaintext.decode("utf-8")
