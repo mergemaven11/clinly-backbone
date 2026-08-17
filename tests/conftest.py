@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import os
 
-import pytest
-
 
 def _escape_workflow_command(value: str) -> str:
     return (
@@ -13,13 +11,16 @@ def _escape_workflow_command(value: str) -> str:
     )
 
 
-def pytest_runtest_logreport(report: pytest.TestReport) -> None:
+def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
     """Expose useful pytest tracebacks as GitHub Actions annotations."""
-    if os.getenv("GITHUB_ACTIONS") != "true" or not report.failed:
+    if os.getenv("GITHUB_ACTIONS") != "true":
         return
 
-    details = getattr(report, "longreprtext", str(report.longrepr))
-    details = details[-12000:]
-    message = _escape_workflow_command(details)
-    title = _escape_workflow_command(f"pytest failure: {report.nodeid}")
-    print(f"::error title={title}::{message}", flush=True)
+    for report in terminalreporter.stats.get("failed", []):
+        details = getattr(report, "longreprtext", str(report.longrepr))[-12000:]
+        message = _escape_workflow_command(details)
+        title = _escape_workflow_command(f"pytest failure: {report.nodeid}")
+        terminalreporter.write_line(
+            f"::error title={title}::{message}",
+            yellow=True,
+        )
