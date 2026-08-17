@@ -19,6 +19,7 @@ def get_database(request: Request) -> Database:
 
 
 def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     database: Database = Depends(get_database),
 ) -> dict[str, Any]:
@@ -29,14 +30,11 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    settings = get_settings()
-    if not settings.jwt_secret:
-        raise RuntimeError("JWT_SECRET must be configured before authentication is used")
-
+    secret = get_settings().jwt_secret.get_secret_value()
     try:
         payload = decode_access_token(
             credentials.credentials,
-            secret=settings.jwt_secret,
+            secret=secret,
         )
         user_id = payload["sub"]
         if not ObjectId.is_valid(user_id):
@@ -61,4 +59,5 @@ def get_current_user(
             detail="Account disabled",
         )
 
+    request.state.actor_user_id = user_id
     return user
