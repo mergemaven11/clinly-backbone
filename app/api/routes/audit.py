@@ -35,7 +35,11 @@ def _normalize_datetime(value: datetime | None) -> datetime | None:
     return value.astimezone(timezone.utc)
 
 
-def _audit_query(subject_user_id: str, start: datetime | None, end: datetime | None) -> dict[str, Any]:
+def _audit_query(
+    subject_user_id: str,
+    start: datetime | None,
+    end: datetime | None,
+) -> dict[str, Any]:
     query: dict[str, Any] = {"subject_user_id": subject_user_id}
     timestamp_filter: dict[str, datetime] = {}
     if start is not None:
@@ -75,7 +79,10 @@ def _safe_csv_cell(value: Any) -> str:
     if value is None:
         return ""
     if isinstance(value, datetime):
-        text = value.astimezone(timezone.utc).isoformat()
+        normalized = _normalize_datetime(value)
+        if normalized is None:  # pragma: no cover - narrowed above
+            return ""
+        text = normalized.isoformat()
     elif isinstance(value, bool):
         text = "true" if value else "false"
     else:
@@ -154,7 +161,9 @@ def export_audit_events(
     writer = csv.DictWriter(output, fieldnames=CSV_FIELDS, extrasaction="ignore")
     writer.writeheader()
     for event in events:
-        writer.writerow({field: _safe_csv_cell(event.get(field)) for field in CSV_FIELDS})
+        writer.writerow(
+            {field: _safe_csv_cell(event.get(field)) for field in CSV_FIELDS}
+        )
 
     log_audit_event(
         database,
@@ -166,10 +175,9 @@ def export_audit_events(
         request=request,
     )
 
+    filename = f"clinly-audit-{subject_user_id}.csv"
     return Response(
         content=output.getvalue(),
         media_type="text/csv",
-        headers={
-            "Content-Disposition": f'attachment; filename="clinly-audit-{subject_user_id}.csv"'
-        },
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
