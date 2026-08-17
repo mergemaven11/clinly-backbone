@@ -4,11 +4,11 @@ import json
 from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 
+import jwt
 import pytest
 from bson import ObjectId
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.testclient import TestClient
-from jose import jwt
 from pydantic import ValidationError
 
 from app.core.config import DEV_ENCRYPTION_KEY, Settings, get_settings
