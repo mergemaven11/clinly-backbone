@@ -35,7 +35,7 @@ jobs:
       MONGO_DB_NAME: clinly_ci
       TEST_MONGO_URI: mongodb://localhost:27017
       JWT_SECRET: ci-placeholder-not-for-production
-      MESSAGE_ENCRYPTION_KEY: ci-placeholder-not-for-production
+      MESSAGE_ENCRYPTION_KEY: fFauOTt3BH8g9ZW7qzMjYBlq4WqrbGzZkr0KQINCO3c=
 
     steps:
       - name: Check out repository

@@ -10,21 +10,19 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.api.routes.auth import router as auth_router
+from app.api.routes.conversations import router as conversations_router
+from app.api.routes.messages import router as messages_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.db.mongo import MongoConnector
+from app.services.encryption import MessageCipher
 
 logger = logging.getLogger("app")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Application lifecycle manager.
-
-    Connects to MongoDB, verifies connectivity, initializes required indexes,
-    and closes the client cleanly on shutdown. Startup fails fast when Mongo is
-    unavailable so an unhealthy process is never advertised as ready.
-    """
+    """Initialize required dependencies and fail fast on unsafe configuration."""
     settings = get_settings()
     configure_logging(settings.log_level)
 
@@ -34,14 +32,16 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         connect_timeout_ms=settings.mongo_connect_timeout_ms,
         server_selection_timeout_ms=settings.mongo_server_selection_timeout_ms,
     )
+    message_cipher = MessageCipher(settings.message_encryption_key)
 
     app.state.settings = settings
     app.state.mongo = mongo
+    app.state.message_cipher = message_cipher
 
     mongo.connect()
     mongo.ping()
     mongo.init_indexes()
-    logger.info("Startup complete. Mongo ping and index initialization OK.")
+    logger.info("Startup complete. Dependencies and encryption configuration OK.")
 
     try:
         yield
@@ -58,6 +58,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.include_router(auth_router)
+app.include_router(conversations_router)
+app.include_router(messages_router)
 
 
 @app.middleware("http")
