@@ -1,24 +1,54 @@
 # Clinly Backbone
 
-Secure FastAPI + MongoDB backend foundation for Clinly.
+Secure FastAPI + MongoDB backend for therapist/client messaging and audit evidence.
 
-> **Release status:** pre-V1. The repository currently provides the runtime,
-> configuration, Mongo connectivity, health/readiness checks, PHI-safe request
-> metadata logging, containerization, and core user indexes. Authentication,
-> authorization, encrypted messaging, and append-only audit APIs are the next
-> V1 milestones and are tracked in GitHub issues.
+**Current release: 1.0.0**
 
-## V1 goal
+Clinly Backbone V1 provides authenticated therapist/client identity, strict ownership boundaries, encrypted message storage, append-only application audit events, scoped audit export, production-safe configuration, and security-focused CI.
 
-Clinly Backbone V1 will provide:
+> Clinly is designed to support HIPAA technical safeguards, but application code alone does not make an organization HIPAA compliant. Administrative, contractual, operational, infrastructure, privacy, and security controls remain the responsibility of the deploying organization.
 
-- Therapist and client accounts with strict ownership boundaries
-- JWT authentication and centralized authorization
-- Therapist-client conversations
-- Authenticated encryption for message bodies at rest
-- Append-only audit events for PHI access and authorization denials
-- Therapist-scoped audit querying and export
-- Security-critical integration tests and production deployment guidance
+## V1 capabilities
+
+- Therapist signup and bcrypt password hashing
+- JWT Bearer authentication
+- Therapist-owned client accounts
+- Tenant-isolated therapist/client conversations
+- Centralized authorization before PHI access or message decryption
+- XChaCha20-Poly1305 authenticated message encryption via PyNaCl
+- Ciphertext-only message persistence in MongoDB
+- Append-only application audit writer
+- Therapist-scoped audit queries and CSV export
+- Resource-safe denial behavior for foreign/guessed IDs
+- Login failure throttling with audited HTTP 429 responses
+- PHI-safe structured JSON request logging
+- Exact-origin CORS configuration, disabled by default
+- Health and dependency-aware readiness endpoints
+- Python 3.11/3.12 integration tests against MongoDB
+- Locked dependency vulnerability auditing
+- Non-root multi-stage production container build
+- Operations, QA, and production configuration runbooks
+
+## API
+
+Interactive OpenAPI documentation is available from FastAPI at `/docs` when documentation is exposed by the deployment.
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/auth/signup-therapist` | Create therapist account |
+| POST | `/auth/login` | Authenticate and issue Bearer token |
+| GET | `/auth/me` | Return authenticated user |
+| POST | `/auth/create-client` | Therapist creates owned client |
+| POST | `/conversations` | Create therapist/client conversation |
+| GET | `/conversations/me` | List authenticated participant's conversations |
+| POST | `/messages` | Send encrypted message |
+| GET | `/messages` | List authorized conversation messages |
+| GET | `/audit` | Query audit events for owned client |
+| POST | `/export` | Export owned-client audit events as CSV |
+| GET | `/health` | Process liveness |
+| GET | `/ready` | MongoDB-aware readiness |
+
+Protected endpoints use an HTTP Bearer access token.
 
 ## Quick start
 
@@ -29,34 +59,16 @@ cp .env.example .env
 docker compose up --build
 ```
 
-The local example credentials are development-only and must never be reused in
-production.
-
-### Health
+Then:
 
 ```bash
 curl http://localhost:8000/health
-```
-
-Expected response:
-
-```json
-{"status":"ok"}
-```
-
-### Readiness
-
-```bash
 curl http://localhost:8000/ready
 ```
 
-Expected response while MongoDB is reachable:
+The values in `.env.example` are local-development examples only. Never reuse them in production.
 
-```json
-{"status":"ready"}
-```
-
-## Development checks
+## Development
 
 ```bash
 poetry install
@@ -64,25 +76,42 @@ poetry run ruff check app tests
 poetry run pytest -q
 ```
 
-The CI workflow runs lint and integration tests on Python 3.11 and 3.12 and
-also verifies that the production Docker image builds.
+CI runs:
 
-## Security principles
+- Ruff + pytest on Python 3.11
+- Ruff + pytest on Python 3.12
+- MongoDB-backed integration/security tests
+- locked runtime dependency audit with `pip-audit`
+- production Docker image build
 
-- Never log request bodies or decrypted PHI
-- Never store plaintext message bodies once messaging lands
-- Enforce tenant/ownership authorization before PHI access or decryption
-- Record PHI access and authorization denials in append-only audit events
-- Keep MongoDB private in production and require authentication
-- Keep application secrets out of source control
+## Security model
 
-See [SECURITY.md](SECURITY.md) for the security model and production
-requirements.
+Core rules:
 
-## Version
+- Do not log request bodies, passwords, tokens, decrypted messages, or other PHI-bearing payloads.
+- Never persist message plaintext; MongoDB message records contain authenticated ciphertext.
+- Authorize tenant/participant access before retrieving/decrypting PHI.
+- Audit PHI-related actions and authorization denials without putting message content into audit metadata.
+- Keep MongoDB authenticated, private, and TLS-protected in production.
+- Inject secrets from an approved secrets manager.
+- Treat `MESSAGE_ENCRYPTION_KEY` as recovery-critical. V1 does not implement key rotation/re-encryption.
 
-Current development version: **0.1.0**.
+See [SECURITY.md](SECURITY.md) for the security policy.
 
-The version will move to **1.0.0** only after the V1 authentication,
-authorization, encrypted messaging, audit, security-test, and release gates are
-implemented and passing.
+## Production and operations
+
+- [Production configuration](docs/production-config.md)
+- [Backup and restore operations](docs/operations.md)
+- [V1 QA checklist](docs/qa-checklist.md)
+- [Security policy](SECURITY.md)
+- [Changelog](CHANGELOG.md)
+
+## V1 release gate
+
+A V1 candidate must pass lint, the full test suite on both supported Python versions, the locked dependency security audit, the production image build, and the OpenAPI contract tests.
+
+Repository-level required-check enforcement is tracked separately in GitHub issue #26. The CI checks exist and pass, but branch/ruleset enforcement depends on repository settings available to the GitHub account/plan.
+
+## License / use
+
+Review the repository's licensing and organizational policies before production use. Security and compliance review is required before handling real clinical data.
