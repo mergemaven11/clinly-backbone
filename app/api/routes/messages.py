@@ -29,7 +29,17 @@ def _serialize_message(
     )
 
 
-@router.post("", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=MessageResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Send an encrypted message in an authorized conversation",
+    responses={
+        401: {"description": "Missing, invalid, or expired access token"},
+        404: {"description": "Conversation is not found or not accessible"},
+        422: {"description": "Request validation failed"},
+    },
+)
 def send_message(
     payload: MessageCreate,
     request: Request,
@@ -71,7 +81,16 @@ def send_message(
     return _serialize_message(message, cipher=cipher)
 
 
-@router.get("", response_model=list[MessageResponse])
+@router.get(
+    "",
+    response_model=list[MessageResponse],
+    summary="List messages in an authorized conversation",
+    responses={
+        401: {"description": "Missing, invalid, or expired access token"},
+        404: {"description": "Conversation is not found or not accessible"},
+        422: {"description": "Query validation failed"},
+    },
+)
 def list_messages(
     request: Request,
     conversation_id: str = Query(..., min_length=1, max_length=64),
