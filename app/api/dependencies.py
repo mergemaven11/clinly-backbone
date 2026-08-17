@@ -5,7 +5,7 @@ from typing import Any
 from bson import ObjectId
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError
+from jwt import InvalidTokenError
 from pymongo.database import Database
 
 from app.core.config import get_settings
@@ -38,8 +38,8 @@ def get_current_user(
         )
         user_id = payload["sub"]
         if not ObjectId.is_valid(user_id):
-            raise JWTError("invalid subject")
-    except JWTError as exc:
+            raise InvalidTokenError("invalid subject")
+    except InvalidTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
