@@ -10,11 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class MongoConnector:
-    """MongoDB connector used by the Clinly application lifecycle.
-
-    The connector owns the client, verifies connectivity, and initializes the
-    idempotent indexes required by the application foundation.
-    """
+    """MongoDB connector used by the Clinly application lifecycle."""
 
     def __init__(
         self,
@@ -56,12 +52,7 @@ class MongoConnector:
         return self._client[self._db_name]
 
     def init_indexes(self) -> None:
-        """Create the idempotent indexes required by the user model.
-
-        A unique normalized email is the database-level backstop against
-        duplicate accounts. ``therapist_id`` supports ownership lookups for
-        client accounts without imposing uniqueness.
-        """
+        """Create idempotent indexes required by the V1 data model."""
         database = self.db()
         database.users.create_index(
             [("email", ASCENDING)],
@@ -71,6 +62,27 @@ class MongoConnector:
         database.users.create_index(
             [("therapist_id", ASCENDING)],
             name="ix_users_therapist_id",
+        )
+        database.conversations.create_index(
+            [("therapist_id", ASCENDING), ("client_id", ASCENDING)],
+            unique=True,
+            name="uq_conversations_therapist_client",
+        )
+        database.conversations.create_index(
+            [("client_id", ASCENDING)],
+            name="ix_conversations_client_id",
+        )
+        database.messages.create_index(
+            [("conversation_id", ASCENDING), ("created_at", ASCENDING)],
+            name="ix_messages_conversation_created_at",
+        )
+        database.audit_events.create_index(
+            [("timestamp", ASCENDING)],
+            name="ix_audit_events_timestamp",
+        )
+        database.audit_events.create_index(
+            [("subject_user_id", ASCENDING), ("timestamp", ASCENDING)],
+            name="ix_audit_events_subject_timestamp",
         )
         logger.info("Mongo indexes initialized.")
 
