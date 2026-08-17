@@ -62,6 +62,26 @@ jobs:
       - name: Test
         run: poetry run pytest -q
 
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - name: Install frontend dependencies
+        run: npm install --prefix web --no-fund
+
+      - name: Audit frontend dependencies
+        run: npm audit --prefix web --audit-level=high
+
+      - name: Build frontend
+        run: npm run build --prefix web
+
   dependency-audit:
     runs-on: ubuntu-latest
     steps:
@@ -103,5 +123,8 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      - name: Build production image
+      - name: Build production API image
         run: docker build --tag clinly-backbone:ci .
+
+      - name: Build production web image
+        run: docker build --tag clinly-web:ci web
