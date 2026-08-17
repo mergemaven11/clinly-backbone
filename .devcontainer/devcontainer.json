@@ -1,0 +1,35 @@
+{
+  "name": "Clinly Full Stack",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "moby": true,
+      "dockerDashComposeVersion": "v2"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    }
+  },
+  "forwardPorts": [3000, 8000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Clinly Web",
+      "onAutoForward": "openBrowser"
+    },
+    "8000": {
+      "label": "Clinly API",
+      "onAutoForward": "notify"
+    }
+  },
+  "postCreateCommand": "cp -n .env.example .env || true",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  }
+}
