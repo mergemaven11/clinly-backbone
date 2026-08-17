@@ -1,56 +1,57 @@
-# Clinly Backbone
+# Clinly
 
-Secure FastAPI + MongoDB backend for therapist/client messaging and audit evidence.
+Secure relationship portal with a React web app and FastAPI + MongoDB backbone.
 
-**Current release: 1.0.0**
+**Current V1 line: 1.0.x**
 
-Clinly Backbone V1 provides authenticated therapist/client identity, strict ownership boundaries, encrypted message storage, append-only application audit events, scoped audit export, production-safe configuration, and security-focused CI.
+Clinly combines secure messaging with encrypted journaling and progress tracking for ongoing professional relationships. A participant can use the same private portal for care, fitness coaching, laser hair-removal progress, or a general relationship track without creating separate products for each use case.
 
-> Clinly is designed to support HIPAA technical safeguards, but application code alone does not make an organization HIPAA compliant. Administrative, contractual, operational, infrastructure, privacy, and security controls remain the responsibility of the deploying organization.
+> Clinly is designed to support strong security and privacy controls, but application code alone does not make an organization HIPAA compliant or satisfy the rules of every health, fitness, or personal-service use case. Administrative, contractual, operational, infrastructure, privacy, consent, and security controls remain the responsibility of the deploying organization.
 
-## V1 capabilities
+## Full-stack V1 capabilities
 
-- Therapist signup and bcrypt password hashing
+### Relationship portal
+
+- Professional and participant sign-in
+- Professional-created participant accounts
+- Participant roster scoped to the owning professional
+- Care, Fitness, Laser Hair Removal, and General relationship tracks
+- Encrypted track titles
+- Encrypted journal/check-in payloads at rest
+- Participant and professional access to shared track timelines
+- Fitness goal, target, progress, and measurement check-ins
+- Laser session date, treatment-area, redness, sensitivity, irritation, and journal observations
+- Care/general mood, wellbeing, and journal check-ins
+- Descriptive skin tracking only; Clinly does not diagnose skin conditions
+
+### Secure communication and audit
+
 - JWT Bearer authentication
-- Therapist-owned client accounts
-- Tenant-isolated therapist/client conversations
-- Centralized authorization before PHI access or message decryption
-- XChaCha20-Poly1305 authenticated message encryption via PyNaCl
-- Ciphertext-only message persistence in MongoDB
-- Append-only application audit writer
-- Therapist-scoped audit queries and CSV export
+- Tenant/relationship authorization before protected data is decrypted
+- Therapist/professional-owned participant accounts
+- Tenant-isolated conversations
+- XChaCha20-Poly1305 authenticated encryption via PyNaCl
+- Ciphertext-only message persistence
+- Append-only application audit events
+- Professional-scoped audit queries and CSV export
 - Resource-safe denial behavior for foreign/guessed IDs
-- Login failure throttling with audited HTTP 429 responses
-- PHI-safe structured JSON request logging
-- Exact-origin CORS configuration, disabled by default
-- Health and dependency-aware readiness endpoints
-- Python 3.11/3.12 integration tests against MongoDB
-- Locked dependency vulnerability auditing
-- Non-root multi-stage production container build
-- Operations, QA, and production configuration runbooks
+- Login failure throttling
+- PHI-sensitive structured JSON request logging
 
-## API
+### Engineering and operations
 
-Interactive OpenAPI documentation is available from FastAPI at `/docs` when documentation is exposed by the deployment.
+- React web frontend built with Vite
+- Nginx static frontend with same-origin `/api` reverse proxy
+- FastAPI backend
+- MongoDB 7
+- Docker Compose full-stack startup
+- Codespaces/devcontainer configuration with ports 3000 and 8000 forwarded
+- Python 3.11/3.12 integration and security tests
+- Frontend dependency audit and production build in CI
+- Locked Python dependency vulnerability audit
+- Backend and frontend production image builds in CI
 
-| Method | Path | Purpose |
-|---|---|---|
-| POST | `/auth/signup-therapist` | Create therapist account |
-| POST | `/auth/login` | Authenticate and issue Bearer token |
-| GET | `/auth/me` | Return authenticated user |
-| POST | `/auth/create-client` | Therapist creates owned client |
-| POST | `/conversations` | Create therapist/client conversation |
-| GET | `/conversations/me` | List authenticated participant's conversations |
-| POST | `/messages` | Send encrypted message |
-| GET | `/messages` | List authorized conversation messages |
-| GET | `/audit` | Query audit events for owned client |
-| POST | `/export` | Export owned-client audit events as CSV |
-| GET | `/health` | Process liveness |
-| GET | `/ready` | MongoDB-aware readiness |
-
-Protected endpoints use an HTTP Bearer access token.
-
-## Quick start
+## Run the complete app
 
 Requirements: Docker with Docker Compose.
 
@@ -59,16 +60,90 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Then:
+Open:
+
+- **Clinly web app:** http://localhost:3000
+- **FastAPI docs:** http://localhost:8000/docs
+- **Health:** http://localhost:8000/health
+- **Readiness:** http://localhost:8000/ready
+
+The web container proxies `/api/*` to the FastAPI container, so the browser does not need a separate API hostname in the Compose stack.
+
+The values in `.env.example` are development-only. Never reuse them in production.
+
+## GitHub Codespaces
+
+The repository includes `.devcontainer/devcontainer.json` with Docker-in-Docker, Node 22, Python 3.12, and forwarded ports for the web app and API.
+
+Create a Codespace from the repository, then run:
 
 ```bash
-curl http://localhost:8000/health
-curl http://localhost:8000/ready
+docker compose up --build
 ```
 
-The values in `.env.example` are local-development examples only. Never reuse them in production.
+Port **3000** is the user-facing Clinly portal. Port **8000** exposes the API and OpenAPI documentation.
+
+## User flow
+
+### Professional
+
+1. Create a professional account or sign in.
+2. Create a participant account.
+3. Start one or more relationship tracks for that participant.
+4. Add journal/progress entries or let the participant add their own check-ins.
+5. Open a secure message thread.
+6. Review the participant-scoped audit trail when needed.
+
+### Participant
+
+1. Sign in with the credentials created by the professional.
+2. Open a shared relationship track.
+3. Journal or enter progress/check-in information.
+4. Review prior entries over time.
+5. Use the secure conversation with the professional.
+
+## Portal track types
+
+| Track | Designed for | V1 check-ins |
+|---|---|---|
+| Care | patient/client and care relationships | journal, mood/theme, wellbeing rating |
+| Fitness | coaching / fitness candidate | goals, targets, progress %, measurements, journal |
+| Laser Hair Removal | treatment/customer relationship | session date, area, redness, sensitivity, irritation, journal |
+| General | other ongoing relationships | flexible journal, mood/theme, wellbeing rating |
+
+Track entry payloads and free-text track titles are encrypted before persistence. The database retains only the structural identifiers needed for authorization, ordering, and relationship lookup alongside ciphertext.
+
+## API
+
+Interactive OpenAPI documentation is available at `/docs` when enabled by the deployment.
+
+Important endpoints include:
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/auth/signup-therapist` | Create the current professional account type |
+| POST | `/auth/login` | Authenticate and issue Bearer token |
+| GET | `/auth/me` | Return authenticated user |
+| POST | `/auth/create-client` | Professional creates an owned participant |
+| GET | `/clients` | List owned participants |
+| POST | `/portal/tracks` | Create a relationship track |
+| GET | `/portal/tracks/me` | List accessible tracks |
+| POST | `/portal/entries` | Add an encrypted journal/progress entry |
+| GET | `/portal/entries` | List decrypted entries after authorization |
+| POST | `/conversations` | Create a participant conversation |
+| GET | `/conversations/me` | List accessible conversations |
+| POST | `/messages` | Send encrypted message |
+| GET | `/messages` | List authorized messages |
+| GET | `/audit` | Query audit events for an owned participant |
+| POST | `/export` | Export participant audit events as CSV |
+| GET | `/health` | Process liveness |
+| GET | `/ready` | MongoDB-aware readiness |
+
+The database/API role name `THERAPIST` is retained in V1 for backward compatibility, while the web product presents that account as **Professional** because relationship tracks now support care, fitness, laser hair removal, and general use cases.
 
 ## Development
+
+Backend:
 
 ```bash
 poetry install
@@ -76,27 +151,30 @@ poetry run ruff check app tests
 poetry run pytest -q
 ```
 
-CI runs:
+Frontend:
 
-- Ruff + pytest on Python 3.11
-- Ruff + pytest on Python 3.12
-- MongoDB-backed integration/security tests
-- locked runtime dependency audit with `pip-audit`
-- production Docker image build
+```bash
+npm install --prefix web
+npm run dev --prefix web
+```
+
+When using the Vite development server, `/api` is proxied to `http://localhost:8000`.
 
 ## Security model
 
 Core rules:
 
-- Do not log request bodies, passwords, tokens, decrypted messages, or other PHI-bearing payloads.
-- Never persist message plaintext; MongoDB message records contain authenticated ciphertext.
-- Authorize tenant/participant access before retrieving/decrypting PHI.
-- Audit PHI-related actions and authorization denials without putting message content into audit metadata.
+- Do not log request bodies, passwords, tokens, decrypted messages, journal payloads, or other sensitive request content.
+- Never persist message plaintext.
+- Never persist portal free text or check-in payloads in plaintext.
+- Authorize a participant/professional relationship before retrieving or decrypting portal data.
+- Audit protected actions and authorization denials without putting journal/message content into audit metadata.
 - Keep MongoDB authenticated, private, and TLS-protected in production.
 - Inject secrets from an approved secrets manager.
 - Treat `MESSAGE_ENCRYPTION_KEY` as recovery-critical. V1 does not implement key rotation/re-encryption.
+- Skin-tracking fields are observational records, not diagnostic output.
 
-See [SECURITY.md](SECURITY.md) for the security policy.
+See [SECURITY.md](SECURITY.md) for the backend security policy.
 
 ## Production and operations
 
@@ -106,12 +184,22 @@ See [SECURITY.md](SECURITY.md) for the security policy.
 - [Security policy](SECURITY.md)
 - [Changelog](CHANGELOG.md)
 
-## V1 release gate
+## CI release gate
 
-A V1 candidate must pass lint, the full test suite on both supported Python versions, the locked dependency security audit, the production image build, and the OpenAPI contract tests.
+A candidate must pass:
 
-Repository-level required-check enforcement is tracked separately in GitHub issue #26. The CI checks exist and pass, but branch/ruleset enforcement depends on repository settings available to the GitHub account/plan.
+- Ruff + pytest on Python 3.11
+- Ruff + pytest on Python 3.12
+- MongoDB-backed security/integration tests
+- locked Python dependency audit
+- frontend npm security audit
+- frontend production build
+- production API image build
+- production web image build
+- OpenAPI contract tests
+
+Repository-level required-check enforcement is still tracked in GitHub issue #26.
 
 ## License / use
 
-Review the repository's licensing and organizational policies before production use. Security and compliance review is required before handling real clinical data.
+Review the repository's licensing and organizational policies before production use. Security, privacy, compliance, consent, and clinical/business review are required before handling real user data.

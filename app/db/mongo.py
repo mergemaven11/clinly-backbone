@@ -76,6 +76,18 @@ class MongoConnector:
             [("conversation_id", ASCENDING), ("created_at", ASCENDING)],
             name="ix_messages_conversation_created_at",
         )
+        database.portal_tracks.create_index(
+            [("professional_user_id", ASCENDING), ("created_at", ASCENDING)],
+            name="ix_portal_tracks_professional_created_at",
+        )
+        database.portal_tracks.create_index(
+            [("client_user_id", ASCENDING), ("created_at", ASCENDING)],
+            name="ix_portal_tracks_client_created_at",
+        )
+        database.portal_entries.create_index(
+            [("track_id", ASCENDING), ("created_at", ASCENDING)],
+            name="ix_portal_entries_track_created_at",
+        )
         database.audit_events.create_index(
             [("timestamp", ASCENDING)],
             name="ix_audit_events_timestamp",
