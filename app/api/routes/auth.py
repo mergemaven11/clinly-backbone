@@ -19,10 +19,10 @@ from app.models.users import (
     UserRole,
 )
 from app.services.audit import log_audit_event
+from app.services.rate_limit import LoginRateLimiter
 from app.services.security import create_access_token, hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-ACCESS_TOKEN_MINUTES = 60
 
 
 def _serialize_user(user: dict[str, Any]) -> UserResponse:
@@ -64,6 +64,12 @@ def _insert_user(
     return document
 
 
+def _client_ip(request: Request) -> str:
+    if request.client is None:
+        return "unknown"
+    return request.client.host
+
+
 @router.post(
     "/signup-therapist",
     response_model=UserResponse,
@@ -100,8 +106,26 @@ def login(
     request: Request,
     database: Database = Depends(get_database),
 ) -> TokenResponse:
+    limiter: LoginRateLimiter = request.app.state.login_rate_limiter
+    ip_address = _client_ip(request)
+    decision = limiter.check(email=payload.email, ip_address=ip_address)
+    if not decision.allowed:
+        log_audit_event(
+            database,
+            action="LOGIN_FAILURE",
+            success=False,
+            request=request,
+            metadata={"reason": "rate_limited", "route": "/auth/login"},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many login attempts",
+            headers={"Retry-After": str(decision.retry_after_seconds)},
+        )
+
     user = database.users.find_one({"email": payload.email})
     if user is None or not verify_password(payload.password, user["password_hash"]):
+        limiter.record_failure(email=payload.email, ip_address=ip_address)
         log_audit_event(
             database,
             action="LOGIN_FAILURE",
@@ -116,6 +140,7 @@ def login(
 
     user_id = str(user["_id"])
     if not user.get("is_active", True):
+        limiter.record_failure(email=payload.email, ip_address=ip_address)
         log_audit_event(
             database,
             action="LOGIN_FAILURE",
@@ -130,15 +155,14 @@ def login(
         )
 
     settings = get_settings()
-    if not settings.jwt_secret:
-        raise RuntimeError("JWT_SECRET must be configured before authentication is used")
-
     access_token = create_access_token(
         subject=user_id,
         role=user["role"],
-        secret=settings.jwt_secret,
-        expires_minutes=ACCESS_TOKEN_MINUTES,
+        secret=settings.jwt_secret.get_secret_value(),
+        expires_minutes=settings.jwt_access_token_minutes,
     )
+    limiter.reset_identity(email=payload.email)
+    request.state.actor_user_id = user_id
     log_audit_event(
         database,
         action="LOGIN_SUCCESS",
@@ -150,7 +174,7 @@ def login(
     )
     return TokenResponse(
         access_token=access_token,
-        expires_in=ACCESS_TOKEN_MINUTES * 60,
+        expires_in=settings.jwt_access_token_minutes * 60,
     )
 
 
