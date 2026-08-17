@@ -6,9 +6,10 @@ import uuid
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from app.api.routes.auth import router as auth_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.db.mongo import MongoConnector
@@ -20,8 +21,9 @@ logger = logging.getLogger("app")
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifecycle manager.
 
-    Connects to MongoDB at startup and closes cleanly on shutdown.
-    Fails fast if Mongo is unreachable to avoid running in a bad state.
+    Connects to MongoDB, verifies connectivity, initializes required indexes,
+    and closes the client cleanly on shutdown. Startup fails fast when Mongo is
+    unavailable so an unhealthy process is never advertised as ready.
     """
     settings = get_settings()
     configure_logging(settings.log_level)
@@ -29,39 +31,38 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     mongo = MongoConnector(
         uri=settings.mongo_uri,
         db_name=settings.mongo_db_name,
+        connect_timeout_ms=settings.mongo_connect_timeout_ms,
+        server_selection_timeout_ms=settings.mongo_server_selection_timeout_ms,
     )
 
     app.state.settings = settings
     app.state.mongo = mongo
 
-    # =========================
-    # Startup
-    # =========================
     mongo.connect()
     mongo.ping()
-    # mongo.init_indexes()
-    logger.info("Startup complete. Mongo ping OK.")
+    mongo.init_indexes()
+    logger.info("Startup complete. Mongo ping and index initialization OK.")
 
     try:
         yield
     finally:
-        # =========================
-        # Shutdown
-        # =========================
         mongo.close()
         logger.info("Shutdown complete.")
 
 
+settings = get_settings()
+
 app = FastAPI(
-    title="Clinly Backbone",
-    version="0.1.0",
+    title=settings.api_title,
+    version=settings.api_version,
     lifespan=lifespan,
 )
+app.include_router(auth_router)
 
 
 @app.middleware("http")
 async def request_log_middleware(request: Request, call_next):
-    """Log method/path/status/latency only (no bodies, no query params)."""
+    """Log method/path/status/latency only; never log bodies or query params."""
     start = time.perf_counter()
     request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
 
@@ -84,9 +85,7 @@ async def request_log_middleware(request: Request, call_next):
             },
         )
 
-    # Always attach request id
     response.headers["X-Request-ID"] = request_id
-
     elapsed_ms = (time.perf_counter() - start) * 1000
 
     logger.info(
@@ -102,14 +101,14 @@ async def request_log_middleware(request: Request, call_next):
 
 
 @app.get("/health")
-def health() -> dict:
-    """Liveness check: process is up."""
+def health() -> dict[str, str]:
+    """Liveness check: the API process is running."""
     return {"status": "ok"}
 
 
 @app.get("/ready")
-def ready(request: Request) -> dict:
-    """Readiness check: dependencies (Mongo) are reachable."""
+def ready(request: Request) -> dict[str, str]:
+    """Readiness check: required dependencies are reachable."""
     mongo: MongoConnector = request.app.state.mongo
     mongo.ping()
     return {"status": "ready"}
