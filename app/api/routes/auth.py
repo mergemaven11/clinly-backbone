@@ -22,6 +22,7 @@ from app.services.audit import log_audit_event
 from app.services.security import create_access_token, hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+ACCESS_TOKEN_MINUTES = 60
 
 
 def _serialize_user(user: dict[str, Any]) -> UserResponse:
@@ -129,11 +130,14 @@ def login(
         )
 
     settings = get_settings()
+    if not settings.jwt_secret:
+        raise RuntimeError("JWT_SECRET must be configured before authentication is used")
+
     access_token = create_access_token(
         subject=user_id,
         role=user["role"],
         secret=settings.jwt_secret,
-        expires_minutes=settings.jwt_access_token_minutes,
+        expires_minutes=ACCESS_TOKEN_MINUTES,
     )
     log_audit_event(
         database,
@@ -146,7 +150,7 @@ def login(
     )
     return TokenResponse(
         access_token=access_token,
-        expires_in=settings.jwt_access_token_minutes * 60,
+        expires_in=ACCESS_TOKEN_MINUTES * 60,
     )
 
 
