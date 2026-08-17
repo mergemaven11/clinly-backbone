@@ -35,11 +35,26 @@ def test_init_indexes_is_idempotent(mongo_connector: MongoConnector) -> None:
     mongo_connector.init_indexes()
     mongo_connector.init_indexes()
 
-    index_info = mongo_connector.db().users.index_information()
+    database = mongo_connector.db()
+    user_indexes = database.users.index_information()
+    track_indexes = database.portal_tracks.index_information()
+    entry_indexes = database.portal_entries.index_information()
 
-    assert index_info["uq_users_email"]["unique"] is True
-    assert index_info["uq_users_email"]["key"] == [("email", 1)]
-    assert index_info["ix_users_therapist_id"]["key"] == [("therapist_id", 1)]
+    assert user_indexes["uq_users_email"]["unique"] is True
+    assert user_indexes["uq_users_email"]["key"] == [("email", 1)]
+    assert user_indexes["ix_users_therapist_id"]["key"] == [("therapist_id", 1)]
+    assert track_indexes["ix_portal_tracks_professional_created_at"]["key"] == [
+        ("professional_user_id", 1),
+        ("created_at", 1),
+    ]
+    assert track_indexes["ix_portal_tracks_client_created_at"]["key"] == [
+        ("client_user_id", 1),
+        ("created_at", 1),
+    ]
+    assert entry_indexes["ix_portal_entries_track_created_at"]["key"] == [
+        ("track_id", 1),
+        ("created_at", 1),
+    ]
 
 
 def test_duplicate_email_is_rejected(mongo_connector: MongoConnector) -> None:
