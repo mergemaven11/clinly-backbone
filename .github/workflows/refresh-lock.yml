@@ -1,0 +1,45 @@
+name: Refresh dependency lock
+
+on:
+  push:
+    branches:
+      - agent/v1-production-hardening
+    paths:
+      - pyproject.toml
+      - .github/workflows/refresh-lock.yml
+
+permissions:
+  contents: write
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: agent/v1-production-hardening
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Refresh lockfile
+        run: poetry lock
+
+      - name: Commit lockfile
+        shell: bash
+        run: |
+          if git diff --quiet -- poetry.lock; then
+            echo "poetry.lock is already current"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add poetry.lock
+          git commit -m "chore: refresh dependency lock for PyNaCl"
+          git push origin HEAD:agent/v1-production-hardening
