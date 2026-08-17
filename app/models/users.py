@@ -4,6 +4,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field, field_validator
 
+BCRYPT_MAX_PASSWORD_BYTES = 72
+
 
 class UserRole(StrEnum):
     THERAPIST = "THERAPIST"
@@ -21,6 +23,13 @@ class Credentials(BaseModel):
         if "@" not in normalized or normalized.startswith("@") or normalized.endswith("@"):
             raise ValueError("invalid email address")
         return normalized
+
+    @field_validator("password")
+    @classmethod
+    def validate_bcrypt_password_length(cls, value: str) -> str:
+        if len(value.encode("utf-8")) > BCRYPT_MAX_PASSWORD_BYTES:
+            raise ValueError("password must be at most 72 UTF-8 bytes")
+        return value
 
 
 class TherapistSignup(Credentials):
