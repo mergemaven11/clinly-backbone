@@ -63,23 +63,27 @@ Always rehearse restores outside production first.
 1. Provision an isolated MongoDB deployment compatible with the source backup.
 2. Restrict network access and enable authentication/TLS before loading PHI-bearing data.
 3. Retrieve the selected encrypted backup from approved storage and verify its integrity.
-4. Restore into an empty recovery database.
+4. Restore the `clinly.*` archive namespaces into an empty recovery database.
 5. Start a Clinly instance against the recovery database using a copy of the correct message-encryption key from the approved secrets system.
 6. Run the post-restore validation checklist below.
 7. Only after validation, execute the organization's approved production cutover procedure.
 
-Example restore:
+MongoDB archive restores preserve the namespaces stored in the archive. To rehearse safely under a different database name, explicitly remap `clinly.*` to `clinly_recovery.*` with `--nsFrom` and `--nsTo`:
 
 ```bash
-export MONGO_RESTORE_URI='mongodb://<restore-user>:<password>@<host>:27017/clinly_recovery?authSource=admin&tls=true'
+export MONGO_RESTORE_URI='mongodb://<restore-user>:<password>@<host>:27017/admin?authSource=admin&tls=true'
 mongorestore \
   --uri="$MONGO_RESTORE_URI" \
   --archive="./clinly-backup.archive" \
   --gzip \
+  --nsFrom='clinly.*' \
+  --nsTo='clinly_recovery.*' \
   --drop
 ```
 
-`--drop` is destructive to collections in the target database. Use it only against the intended recovery target after confirming the target URI.
+`--drop` is destructive to matching collections in the destination namespace. Use it only against the intended isolated recovery target after confirming the target server and namespace mapping.
+
+MongoDB documents namespace remapping for archive restores with `--nsFrom`/`--nsTo`: https://www.mongodb.com/docs/database-tools/mongorestore/mongorestore-examples/
 
 ## Post-restore validation
 
