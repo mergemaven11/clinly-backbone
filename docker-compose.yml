@@ -41,5 +41,16 @@ services:
       --port 8000
       --reload
 
+  web:
+    build:
+      context: ./web
+    container_name: clinly-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "3000:80"
+
 volumes:
   mongo_data:
