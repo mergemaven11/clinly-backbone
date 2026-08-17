@@ -41,7 +41,7 @@ def require_therapist(
     current_user: dict[str, Any],
     request: Request,
 ) -> None:
-    """Require the authenticated user to have the therapist role."""
+    """Require the authenticated user to have the professional/therapist role."""
     if current_user.get("role") != UserRole.THERAPIST.value:
         _deny(
             database,
@@ -135,3 +135,49 @@ def authorize_conversation_access(
             resource_id=safe_resource_id,
         )
     return conversation
+
+
+def authorize_track_access(
+    database: Database,
+    *,
+    track_id: str,
+    current_user: dict[str, Any],
+    request: Request,
+) -> dict[str, Any]:
+    """Authorize a portal relationship participant before decrypting track data."""
+    safe_resource_id = track_id if ObjectId.is_valid(track_id) else None
+    if not ObjectId.is_valid(track_id):
+        _deny(
+            database,
+            current_user=current_user,
+            request=request,
+            resource_type="portal_track",
+            resource_id=safe_resource_id,
+        )
+
+    track = database.portal_tracks.find_one({"_id": ObjectId(track_id)})
+    if track is None:
+        _deny(
+            database,
+            current_user=current_user,
+            request=request,
+            resource_type="portal_track",
+            resource_id=safe_resource_id,
+        )
+
+    user_id = current_user["_id"]
+    role = current_user.get("role")
+    authorized = (
+        role == UserRole.THERAPIST.value
+        and track["professional_user_id"] == user_id
+    ) or (role == UserRole.CLIENT.value and track["client_user_id"] == user_id)
+
+    if not authorized:
+        _deny(
+            database,
+            current_user=current_user,
+            request=request,
+            resource_type="portal_track",
+            resource_id=safe_resource_id,
+        )
+    return track
