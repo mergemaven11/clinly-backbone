@@ -25,7 +25,19 @@ def _serialize_conversation(conversation: dict[str, Any]) -> ConversationRespons
     )
 
 
-@router.post("", response_model=ConversationResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=ConversationResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a therapist-client conversation",
+    responses={
+        401: {"description": "Missing, invalid, or expired access token"},
+        403: {"description": "Therapist role is required"},
+        404: {"description": "Client is not found or not owned by the therapist"},
+        409: {"description": "Conversation already exists"},
+        422: {"description": "Request validation failed"},
+    },
+)
 def create_conversation(
     payload: ConversationCreate,
     request: Request,
@@ -68,7 +80,15 @@ def create_conversation(
     return _serialize_conversation(conversation)
 
 
-@router.get("/me", response_model=list[ConversationResponse])
+@router.get(
+    "/me",
+    response_model=list[ConversationResponse],
+    summary="List conversations for the authenticated participant",
+    responses={
+        401: {"description": "Missing, invalid, or expired access token"},
+        403: {"description": "Authenticated role cannot access conversations"},
+    },
+)
 def list_my_conversations(
     request: Request,
     database: Database = Depends(get_database),
