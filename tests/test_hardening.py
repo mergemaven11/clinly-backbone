@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import io
 import json
+import logging
 from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 
@@ -12,6 +14,7 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from app.core.config import DEV_ENCRYPTION_KEY, Settings, get_settings
+from app.core.logging import JsonFormatter
 from app.main import app
 
 PASSWORD = "StrongPass123!"
@@ -173,10 +176,7 @@ def test_ready_returns_503_when_mongo_ping_fails(
     assert response.json()["detail"] == "Service not ready"
 
 
-def test_plaintext_message_never_appears_in_structured_logs(
-    client: TestClient,
-    capfd: pytest.CaptureFixture[str],
-) -> None:
+def test_plaintext_message_never_appears_in_structured_logs(client: TestClient) -> None:
     therapist = _signup(client)
     therapist_token = _login(client)
     created_client = client.post(
@@ -190,39 +190,52 @@ def test_plaintext_message_never_appears_in_structured_logs(
         json={"client_id": created_client["id"]},
     ).json()
 
+    log_buffer = io.StringIO()
+    capture_handler = logging.StreamHandler(log_buffer)
+    capture_handler.setFormatter(JsonFormatter(app_env=get_settings().app_env))
+    root_logger = logging.getLogger()
+    root_logger.addHandler(capture_handler)
+
     secret_body = "ultra-private-message-body-9f8d7c"
-    capfd.readouterr()
-    sent = client.post(
-        "/messages",
-        headers={"Authorization": f"Bearer {therapist_token}"},
-        json={
-            "conversation_id": conversation["id"],
-            "plaintext_body": secret_body,
-        },
-    )
-    assert sent.status_code == 201
-    captured = capfd.readouterr().out
-    assert secret_body not in captured
+    try:
+        sent = client.post(
+            "/messages",
+            headers={"Authorization": f"Bearer {therapist_token}"},
+            json={
+                "conversation_id": conversation["id"],
+                "plaintext_body": secret_body,
+            },
+        )
+        assert sent.status_code == 201
+        capture_handler.flush()
+        captured = log_buffer.getvalue()
+        assert secret_body not in captured
 
-    log_lines = [line for line in captured.splitlines() if line.startswith("{")]
-    request_logs = [
-        json.loads(line)
-        for line in log_lines
-        if '"message":"request_complete"' in line and '"route":"/messages"' in line
-    ]
-    assert request_logs
-    message_log = request_logs[-1]
-    assert message_log["actor_user_id"] == therapist["id"]
-    assert message_log["status_code"] == 201
-    assert message_log["request_id"]
-    assert isinstance(message_log["latency_ms"], (int, float))
+        log_lines = [line for line in captured.splitlines() if line.startswith("{")]
+        request_logs = [
+            json.loads(line)
+            for line in log_lines
+            if '"message":"request_complete"' in line
+            and '"route":"/messages"' in line
+        ]
+        assert request_logs
+        message_log = request_logs[-1]
+        assert message_log["actor_user_id"] == therapist["id"]
+        assert message_log["status_code"] == 201
+        assert message_log["request_id"]
+        assert isinstance(message_log["latency_ms"], (int, float))
 
-    capfd.readouterr()
-    listed = client.get(
-        "/messages",
-        params={"conversation_id": conversation["id"]},
-        headers={"Authorization": f"Bearer {therapist_token}"},
-    )
-    assert listed.status_code == 200
-    assert listed.json()[0]["plaintext_body"] == secret_body
-    assert secret_body not in capfd.readouterr().out
+        log_buffer.seek(0)
+        log_buffer.truncate(0)
+        listed = client.get(
+            "/messages",
+            params={"conversation_id": conversation["id"]},
+            headers={"Authorization": f"Bearer {therapist_token}"},
+        )
+        assert listed.status_code == 200
+        assert listed.json()[0]["plaintext_body"] == secret_body
+        capture_handler.flush()
+        assert secret_body not in log_buffer.getvalue()
+    finally:
+        root_logger.removeHandler(capture_handler)
+        capture_handler.close()
