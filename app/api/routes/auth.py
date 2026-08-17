@@ -74,6 +74,11 @@ def _client_ip(request: Request) -> str:
     "/signup-therapist",
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
+    summary="Create a therapist account",
+    responses={
+        409: {"description": "Email is already registered"},
+        422: {"description": "Request validation failed"},
+    },
 )
 def signup_therapist(
     payload: TherapistSignup,
@@ -100,7 +105,17 @@ def signup_therapist(
     return _serialize_user(user)
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    summary="Authenticate and issue an access token",
+    responses={
+        401: {"description": "Invalid credentials"},
+        403: {"description": "Account is disabled"},
+        422: {"description": "Request validation failed"},
+        429: {"description": "Too many login attempts"},
+    },
+)
 def login(
     payload: LoginRequest,
     request: Request,
@@ -178,7 +193,15 @@ def login(
     )
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get(
+    "/me",
+    response_model=UserResponse,
+    summary="Return the authenticated user",
+    responses={
+        401: {"description": "Missing, invalid, or expired access token"},
+        403: {"description": "Account is disabled"},
+    },
+)
 def me(current_user: dict[str, Any] = Depends(get_current_user)) -> UserResponse:
     return _serialize_user(current_user)
 
@@ -187,6 +210,13 @@ def me(current_user: dict[str, Any] = Depends(get_current_user)) -> UserResponse
     "/create-client",
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
+    summary="Create a client owned by the authenticated therapist",
+    responses={
+        401: {"description": "Missing, invalid, or expired access token"},
+        403: {"description": "Therapist role is required"},
+        409: {"description": "Email is already registered"},
+        422: {"description": "Request validation failed"},
+    },
 )
 def create_client(
     payload: ClientCreate,

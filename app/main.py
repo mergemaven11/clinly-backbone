@@ -35,9 +35,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         connect_timeout_ms=settings.mongo_connect_timeout_ms,
         server_selection_timeout_ms=settings.mongo_server_selection_timeout_ms,
     )
-    message_cipher = MessageCipher(
-        settings.message_encryption_key.get_secret_value()
-    )
+    message_cipher = MessageCipher(settings.message_encryption_key.get_secret_value())
     login_rate_limiter = LoginRateLimiter(
         identity_max_attempts=settings.login_rate_limit_max_attempts,
         ip_max_attempts=settings.login_rate_limit_ip_max_attempts,
@@ -66,6 +64,10 @@ settings = get_settings()
 app = FastAPI(
     title=settings.api_title,
     version=settings.api_version,
+    description=(
+        "Clinly Backbone V1 provides therapist/client identity, tenant-isolated "
+        "conversations, authenticated encrypted messaging, and scoped audit/export APIs."
+    ),
     lifespan=lifespan,
 )
 
@@ -140,13 +142,24 @@ async def request_log_middleware(request: Request, call_next):
     return response
 
 
-@app.get("/health")
+@app.get(
+    "/health",
+    summary="Liveness check",
+    responses={200: {"description": "API process is running"}},
+)
 def health() -> dict[str, str]:
     """Liveness check: the API process is running."""
     return {"status": "ok"}
 
 
-@app.get("/ready")
+@app.get(
+    "/ready",
+    summary="Dependency readiness check",
+    responses={
+        200: {"description": "Required dependencies are reachable"},
+        503: {"description": "MongoDB is unavailable"},
+    },
+)
 def ready(request: Request) -> dict[str, str]:
     """Readiness check: return 503 while MongoDB is unavailable."""
     mongo: MongoConnector = request.app.state.mongo

@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "clinly-backbone"
-version = "0.1.0"
-description = "Clinly Backbone - FastAPI + MongoDB (secure messaging + audit backbone)"
+version = "1.0.0"
+description = "Clinly Backbone - secure FastAPI + MongoDB messaging and audit backbone"
 authors = ["tobiascodes12@gmail.com"]
 readme = "README.md"
 packages = [{ include = "app" }]

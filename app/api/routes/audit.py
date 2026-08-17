@@ -88,14 +88,22 @@ def _safe_csv_cell(value: Any) -> str:
     else:
         text = str(value)
 
-    # Prevent spreadsheet formula execution if an exported metadata field such
-    # as User-Agent starts with a formula sigil.
     if text.startswith(("=", "+", "-", "@")):
         return "'" + text
     return text
 
 
-@router.get("/audit", response_model=list[AuditEventResponse])
+@router.get(
+    "/audit",
+    response_model=list[AuditEventResponse],
+    summary="Query audit events for an owned client",
+    responses={
+        401: {"description": "Missing, invalid, or expired access token"},
+        403: {"description": "Therapist role is required"},
+        404: {"description": "Client is not found or not owned by the therapist"},
+        422: {"description": "Query/date-range validation failed"},
+    },
+)
 def query_audit_events(
     request: Request,
     subject_user_id: str = Query(..., min_length=1, max_length=64),
@@ -132,7 +140,21 @@ def query_audit_events(
     return [_serialize_event(event) for event in events]
 
 
-@router.post("/export")
+@router.post(
+    "/export",
+    summary="Export scoped audit events as CSV",
+    response_class=Response,
+    responses={
+        200: {
+            "description": "CSV audit export",
+            "content": {"text/csv": {"schema": {"type": "string"}}},
+        },
+        401: {"description": "Missing, invalid, or expired access token"},
+        403: {"description": "Therapist role is required"},
+        404: {"description": "Client is not found or not owned by the therapist"},
+        422: {"description": "Query/date-range validation failed"},
+    },
+)
 def export_audit_events(
     request: Request,
     subject_user_id: str = Query(..., min_length=1, max_length=64),
