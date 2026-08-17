@@ -27,55 +27,22 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("APP_ENV", "ENVIRONMENT"),
     )
     api_title: str = Field("Clinly Backbone", alias="API_TITLE")
-    api_version: str = Field("0.1.0", alias="API_VERSION")
+    api_version: str = Field("1.0.0", alias="API_VERSION")
     log_level: LogLevel = Field("INFO", alias="LOG_LEVEL")
 
     mongo_uri: str = Field(..., min_length=1, alias="MONGO_URI")
     mongo_db_name: str = Field("clinly", alias="MONGO_DB_NAME")
-    mongo_connect_timeout_ms: int = Field(
-        3000,
-        ge=250,
-        le=30_000,
-        alias="MONGO_CONNECT_TIMEOUT_MS",
-    )
-    mongo_server_selection_timeout_ms: int = Field(
-        3000,
-        ge=250,
-        le=30_000,
-        alias="MONGO_SERVER_SELECTION_TIMEOUT_MS",
-    )
+    mongo_connect_timeout_ms: int = Field(3000, ge=250, le=30_000, alias="MONGO_CONNECT_TIMEOUT_MS")
+    mongo_server_selection_timeout_ms: int = Field(3000, ge=250, le=30_000, alias="MONGO_SERVER_SELECTION_TIMEOUT_MS")
 
     jwt_secret: SecretStr = Field(..., min_length=32, alias="JWT_SECRET")
     message_encryption_key: SecretStr = Field(..., alias="MESSAGE_ENCRYPTION_KEY")
-    jwt_access_token_minutes: int = Field(
-        60,
-        ge=5,
-        le=1440,
-        alias="JWT_ACCESS_TOKEN_MINUTES",
-    )
+    jwt_access_token_minutes: int = Field(60, ge=5, le=1440, alias="JWT_ACCESS_TOKEN_MINUTES")
 
-    cors_allowed_origins: list[str] = Field(
-        default_factory=list,
-        alias="CORS_ALLOWED_ORIGINS",
-    )
-    login_rate_limit_max_attempts: int = Field(
-        5,
-        ge=2,
-        le=100,
-        alias="LOGIN_RATE_LIMIT_MAX_ATTEMPTS",
-    )
-    login_rate_limit_ip_max_attempts: int = Field(
-        20,
-        ge=2,
-        le=500,
-        alias="LOGIN_RATE_LIMIT_IP_MAX_ATTEMPTS",
-    )
-    login_rate_limit_window_seconds: int = Field(
-        300,
-        ge=30,
-        le=3600,
-        alias="LOGIN_RATE_LIMIT_WINDOW_SECONDS",
-    )
+    cors_allowed_origins: list[str] = Field(default_factory=list, alias="CORS_ALLOWED_ORIGINS")
+    login_rate_limit_max_attempts: int = Field(5, ge=2, le=100, alias="LOGIN_RATE_LIMIT_MAX_ATTEMPTS")
+    login_rate_limit_ip_max_attempts: int = Field(20, ge=2, le=500, alias="LOGIN_RATE_LIMIT_IP_MAX_ATTEMPTS")
+    login_rate_limit_window_seconds: int = Field(300, ge=30, le=3600, alias="LOGIN_RATE_LIMIT_WINDOW_SECONDS")
 
     @field_validator("log_level", mode="before")
     @classmethod
