@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from pymongo import MongoClient
+from pymongo import ASCENDING, MongoClient
 from pymongo.database import Database
 from pymongo.errors import PyMongoError
 
@@ -10,12 +10,10 @@ logger = logging.getLogger(__name__)
 
 
 class MongoConnector:
-    """Minimal Mongo connector for MVP bootstrap (Issue #1).
+    """MongoDB connector used by the Clinly application lifecycle.
 
-    Goals:
-    - Create a client
-    - Ping Mongo to verify connectivity
-    - Do not log secrets or request bodies
+    The connector owns the client, verifies connectivity, and initializes the
+    idempotent indexes required by the application foundation.
     """
 
     def __init__(
@@ -33,7 +31,7 @@ class MongoConnector:
         self._client: MongoClient | None = None
 
     def connect(self) -> None:
-        """Create the MongoDB client (lazy connection)."""
+        """Create the MongoDB client (the network connection remains lazy)."""
         self._client = MongoClient(
             self._uri,
             connectTimeoutMS=self._connect_timeout_ms,
@@ -56,6 +54,25 @@ class MongoConnector:
         if self._client is None:
             raise RuntimeError("Mongo client not initialized. Call connect() first.")
         return self._client[self._db_name]
+
+    def init_indexes(self) -> None:
+        """Create the idempotent indexes required by the user model.
+
+        A unique normalized email is the database-level backstop against
+        duplicate accounts. ``therapist_id`` supports ownership lookups for
+        client accounts without imposing uniqueness.
+        """
+        database = self.db()
+        database.users.create_index(
+            [("email", ASCENDING)],
+            unique=True,
+            name="uq_users_email",
+        )
+        database.users.create_index(
+            [("therapist_id", ASCENDING)],
+            name="ix_users_therapist_id",
+        )
+        logger.info("Mongo indexes initialized.")
 
     def close(self) -> None:
         """Close the Mongo client."""
