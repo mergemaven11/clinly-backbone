@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - "agent/**"
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok' | grep 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      APP_ENV: dev
+      LOG_LEVEL: INFO
+      API_TITLE: Clinly Backbone
+      API_VERSION: 0.1.0
+      MONGO_URI: mongodb://localhost:27017
+      MONGO_DB_NAME: clinly_ci
+      TEST_MONGO_URI: mongodb://localhost:27017
+      JWT_SECRET: ci-placeholder-not-for-production
+      MESSAGE_ENCRYPTION_KEY: ci-placeholder-not-for-production
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install project
+        run: poetry install --no-interaction
+
+      - name: Lint
+        run: poetry run ruff check app tests
+
+      - name: Test
+        run: poetry run pytest -q
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build production image
+        run: docker build --tag clinly-backbone:ci .
