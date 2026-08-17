@@ -30,8 +30,14 @@ def get_current_user(
         )
 
     settings = get_settings()
+    if not settings.jwt_secret:
+        raise RuntimeError("JWT_SECRET must be configured before authentication is used")
+
     try:
-        payload = decode_access_token(credentials.credentials, secret=settings.jwt_secret)
+        payload = decode_access_token(
+            credentials.credentials,
+            secret=settings.jwt_secret,
+        )
         user_id = payload["sub"]
         if not ObjectId.is_valid(user_id):
             raise JWTError("invalid subject")
@@ -50,6 +56,9 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     if not user.get("is_active", True):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account disabled")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account disabled",
+        )
 
     return user
