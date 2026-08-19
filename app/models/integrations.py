@@ -35,9 +35,11 @@ class IntegrationSetupType(StrEnum):
 
 
 class IntegrationConnectionState(StrEnum):
-    SETUP_REQUIRED = "SETUP_REQUIRED"
+    AVAILABLE = "AVAILABLE"
+    CONNECTING = "CONNECTING"
     CONNECTED = "CONNECTED"
     DEGRADED = "DEGRADED"
+    DISCONNECTED = "DISCONNECTED"
     REVOKED = "REVOKED"
 
 
