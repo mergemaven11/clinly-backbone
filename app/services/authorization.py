@@ -9,6 +9,19 @@ from pymongo.database import Database
 from app.models.users import UserRole
 from app.services.audit import log_audit_event
 
+# V2 presentation/API vocabulary is provider/participant. V1 storage remains
+# THERAPIST/CLIENT until a separately tested data migration is warranted.
+_PROVIDER_ROLE_VALUES = {UserRole.THERAPIST.value, "PROVIDER"}
+_PARTICIPANT_ROLE_VALUES = {UserRole.CLIENT.value, "PARTICIPANT"}
+
+
+def is_provider_role(role: str | None) -> bool:
+    return role in _PROVIDER_ROLE_VALUES
+
+
+def is_participant_role(role: str | None) -> bool:
+    return role in _PARTICIPANT_ROLE_VALUES
+
 
 def _deny(
     database: Database,
@@ -35,22 +48,71 @@ def _deny(
     raise HTTPException(status_code=status_code, detail=detail)
 
 
+def require_provider(
+    database: Database,
+    *,
+    current_user: dict[str, Any],
+    request: Request,
+) -> None:
+    """Require the authenticated user to hold a provider-compatible role."""
+    if not is_provider_role(current_user.get("role")):
+        _deny(
+            database,
+            current_user=current_user,
+            request=request,
+            resource_type="role",
+            reason="provider_required",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+
+
 def require_therapist(
     database: Database,
     *,
     current_user: dict[str, Any],
     request: Request,
 ) -> None:
-    """Require the authenticated user to have the professional/therapist role."""
-    if current_user.get("role") != UserRole.THERAPIST.value:
+    """Backward-compatible V1 alias for require_provider."""
+    require_provider(database, current_user=current_user, request=request)
+
+
+def authorize_subject_participant_access(
+    database: Database,
+    *,
+    subject_user_id: str,
+    provider_user: dict[str, Any],
+    request: Request,
+) -> dict[str, Any]:
+    """Return an owned participant without revealing whether foreign IDs exist."""
+    require_provider(database, current_user=provider_user, request=request)
+
+    safe_resource_id = subject_user_id if ObjectId.is_valid(subject_user_id) else None
+    if not ObjectId.is_valid(subject_user_id):
         _deny(
             database,
-            current_user=current_user,
+            current_user=provider_user,
             request=request,
-            resource_type="role",
-            reason="therapist_required",
-            status_code=status.HTTP_403_FORBIDDEN,
+            resource_type="user",
+            resource_id=safe_resource_id,
         )
+
+    participant = database.users.find_one(
+        {
+            "_id": ObjectId(subject_user_id),
+            "role": {"$in": list(_PARTICIPANT_ROLE_VALUES)},
+            "therapist_id": provider_user["_id"],
+            "is_active": True,
+        }
+    )
+    if participant is None:
+        _deny(
+            database,
+            current_user=provider_user,
+            request=request,
+            resource_type="user",
+            resource_id=safe_resource_id,
+        )
+    return participant
 
 
 def authorize_subject_client_access(
@@ -60,36 +122,13 @@ def authorize_subject_client_access(
     therapist_user: dict[str, Any],
     request: Request,
 ) -> dict[str, Any]:
-    """Return an owned client without revealing whether foreign IDs exist."""
-    require_therapist(database, current_user=therapist_user, request=request)
-
-    safe_resource_id = subject_user_id if ObjectId.is_valid(subject_user_id) else None
-    if not ObjectId.is_valid(subject_user_id):
-        _deny(
-            database,
-            current_user=therapist_user,
-            request=request,
-            resource_type="user",
-            resource_id=safe_resource_id,
-        )
-
-    client = database.users.find_one(
-        {
-            "_id": ObjectId(subject_user_id),
-            "role": UserRole.CLIENT.value,
-            "therapist_id": therapist_user["_id"],
-            "is_active": True,
-        }
+    """Backward-compatible V1 alias for participant ownership authorization."""
+    return authorize_subject_participant_access(
+        database,
+        subject_user_id=subject_user_id,
+        provider_user=therapist_user,
+        request=request,
     )
-    if client is None:
-        _deny(
-            database,
-            current_user=therapist_user,
-            request=request,
-            resource_type="user",
-            resource_id=safe_resource_id,
-        )
-    return client
 
 
 def authorize_conversation_access(
@@ -99,7 +138,7 @@ def authorize_conversation_access(
     current_user: dict[str, Any],
     request: Request,
 ) -> dict[str, Any]:
-    """Authorize a conversation participant before any PHI is accessed."""
+    """Authorize a conversation participant before protected content is accessed."""
     safe_resource_id = conversation_id if ObjectId.is_valid(conversation_id) else None
     if not ObjectId.is_valid(conversation_id):
         _deny(
@@ -123,8 +162,10 @@ def authorize_conversation_access(
     user_id = current_user["_id"]
     role = current_user.get("role")
     authorized = (
-        role == UserRole.THERAPIST.value and conversation["therapist_id"] == user_id
-    ) or (role == UserRole.CLIENT.value and conversation["client_id"] == user_id)
+        is_provider_role(role) and conversation["therapist_id"] == user_id
+    ) or (
+        is_participant_role(role) and conversation["client_id"] == user_id
+    )
 
     if not authorized:
         _deny(
@@ -144,7 +185,7 @@ def authorize_track_access(
     current_user: dict[str, Any],
     request: Request,
 ) -> dict[str, Any]:
-    """Authorize a portal relationship participant before decrypting track data."""
+    """Authorize a relationship participant before decrypting track data."""
     safe_resource_id = track_id if ObjectId.is_valid(track_id) else None
     if not ObjectId.is_valid(track_id):
         _deny(
@@ -168,9 +209,10 @@ def authorize_track_access(
     user_id = current_user["_id"]
     role = current_user.get("role")
     authorized = (
-        role == UserRole.THERAPIST.value
-        and track["professional_user_id"] == user_id
-    ) or (role == UserRole.CLIENT.value and track["client_user_id"] == user_id)
+        is_provider_role(role) and track["professional_user_id"] == user_id
+    ) or (
+        is_participant_role(role) and track["client_user_id"] == user_id
+    )
 
     if not authorized:
         _deny(
