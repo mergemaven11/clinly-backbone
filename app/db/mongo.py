@@ -31,6 +31,7 @@ class MongoConnector:
             self._uri,
             connectTimeoutMS=self._connect_timeout_ms,
             serverSelectionTimeoutMS=self._server_selection_timeout_ms,
+            tz_aware=True,
         )
 
     def ping(self) -> bool:
@@ -135,7 +136,11 @@ class MongoConnector:
             name="ix_bookings_participant_starts_at",
         )
         database.bookings.create_index(
-            [("provider_user_id", ASCENDING), ("status", ASCENDING), ("starts_at", ASCENDING)],
+            [
+                ("provider_user_id", ASCENDING),
+                ("status", ASCENDING),
+                ("starts_at", ASCENDING),
+            ],
             name="ix_bookings_provider_status_starts_at",
         )
         database.audit_events.create_index(
