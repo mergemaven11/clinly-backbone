@@ -1,6 +1,12 @@
 FROM node:22-alpine AS build
 
 WORKDIR /web
+
+ARG VITE_APP_NAME="Provider Portal"
+ARG VITE_APP_TAGLINE="One relationship. One connected place."
+ENV VITE_APP_NAME=${VITE_APP_NAME}
+ENV VITE_APP_TAGLINE=${VITE_APP_TAGLINE}
+
 COPY package.json ./
 RUN npm install --no-audit --no-fund
 COPY . .

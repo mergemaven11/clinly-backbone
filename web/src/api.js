@@ -54,7 +54,7 @@ export async function downloadAudit({ token, clientId }) {
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
-  anchor.download = `clinly-audit-${clientId}.csv`
+  anchor.download = `workspace-audit-${clientId}.csv`
   document.body.appendChild(anchor)
   anchor.click()
   anchor.remove()
