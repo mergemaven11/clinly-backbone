@@ -76,7 +76,7 @@ def test_provider_catalog_is_commercial_metadata_without_secrets(
 def test_connections_are_provider_scoped_and_never_return_credentials(
     client: TestClient,
 ) -> None:
-    provider_one = _signup_provider(client, "one@example.com")
+    _signup_provider(client, "one@example.com")
     one_token = _login(client, "one@example.com")
     provider_two = _signup_provider(client, "two@example.com")
 
