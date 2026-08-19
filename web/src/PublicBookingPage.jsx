@@ -59,6 +59,7 @@ export default function PublicBookingPage({ slug, serviceId }) {
     () => page?.services.find((item) => item.id === serviceId) || null,
     [page, serviceId],
   )
+  const isParticipant = user?.role === 'PARTICIPANT'
 
   useEffect(() => {
     let cancelled = false
@@ -118,6 +119,13 @@ export default function PublicBookingPage({ slug, serviceId }) {
 
   useEffect(() => { loadSlots() }, [loadSlots])
 
+  function switchAccount() {
+    clearSessionToken()
+    setToken('')
+    setUser(null)
+    setError('')
+  }
+
   async function signIn(event) {
     event.preventDefault()
     setAuthBusy(true)
@@ -144,7 +152,7 @@ export default function PublicBookingPage({ slug, serviceId }) {
   }
 
   async function book() {
-    if (!token || !selectedSlot || !service) return
+    if (!token || !isParticipant || !selectedSlot || !service) return
     setBookingBusy(true)
     setError('')
     try {
@@ -231,11 +239,21 @@ export default function PublicBookingPage({ slug, serviceId }) {
                   <label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required /></label>
                   <button className="secondary-button" disabled={authBusy}>{authBusy ? 'Signing in…' : 'Sign in'}</button>
                 </form>
+              ) : !isParticipant ? (
+                <div className="public-booking-member">
+                  <span>Provider account detected</span>
+                  <strong>{user.email}</strong>
+                  <p>Public booking can only be confirmed by a member account. Manage appointments from your Calendar or switch accounts here.</p>
+                  <div className="card-actions">
+                    <a className="secondary-button" href="/">Open Calendar</a>
+                    <button type="button" className="text-button" onClick={switchAccount}>Use member account</button>
+                  </div>
+                </div>
               ) : (
-                <div className="public-booking-member"><span>Signed in as</span><strong>{user.email}</strong><button type="button" className="text-button" onClick={() => { clearSessionToken(); setToken(''); setUser(null) }}>Use another account</button></div>
+                <div className="public-booking-member"><span>Signed in as</span><strong>{user.email}</strong><button type="button" className="text-button" onClick={switchAccount}>Use another account</button></div>
               )}
 
-              <button type="button" className="primary-button full" disabled={!user || !selectedSlot || bookingBusy} onClick={book}>{bookingBusy ? 'Confirming…' : 'Confirm appointment'}</button>
+              <button type="button" className="primary-button full" disabled={!isParticipant || !selectedSlot || bookingBusy} onClick={book}>{bookingBusy ? 'Confirming…' : 'Confirm appointment'}</button>
               <small className="public-booking-policy">The server rechecks availability when you confirm. A displayed time is not reserved until the booking succeeds.</small>
             </>
           )}
