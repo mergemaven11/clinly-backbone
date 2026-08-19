@@ -44,6 +44,9 @@ services:
   web:
     build:
       context: ./web
+      args:
+        VITE_APP_NAME: ${APP_DISPLAY_NAME:-Provider Portal}
+        VITE_APP_TAGLINE: ${APP_TAGLINE:-One relationship. One connected place.}
     container_name: clinly-web
     restart: unless-stopped
     depends_on:
