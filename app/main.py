@@ -16,6 +16,7 @@ from app.api.routes.conversations import router as conversations_router
 from app.api.routes.integrations import router as integrations_router
 from app.api.routes.messages import router as messages_router
 from app.api.routes.portal import router as portal_router
+from app.api.routes.provider_business import router as provider_business_router
 from app.api.routes.providers import router as providers_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
@@ -80,13 +81,14 @@ if settings.cors_allowed_origins:
         CORSMiddleware,
         allow_origins=settings.cors_allowed_origins,
         allow_credentials=True,
-        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
         expose_headers=["X-Request-ID"],
     )
 
 app.include_router(auth_router)
 app.include_router(providers_router)
+app.include_router(provider_business_router)
 app.include_router(conversations_router)
 app.include_router(messages_router)
 app.include_router(portal_router)

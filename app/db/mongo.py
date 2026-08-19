@@ -93,6 +93,33 @@ class MongoConnector:
             unique=True,
             name="uq_integration_connections_provider_key",
         )
+        database.provider_profiles.create_index(
+            [("provider_user_id", ASCENDING)],
+            unique=True,
+            name="uq_provider_profiles_provider_user_id",
+        )
+        database.provider_profiles.create_index(
+            [("public_slug", ASCENDING)],
+            unique=True,
+            sparse=True,
+            name="uq_provider_profiles_public_slug",
+        )
+        database.provider_services.create_index(
+            [
+                ("provider_user_id", ASCENDING),
+                ("archived_at", ASCENDING),
+                ("name", ASCENDING),
+            ],
+            name="ix_provider_services_provider_archived_name",
+        )
+        database.provider_services.create_index(
+            [
+                ("provider_user_id", ASCENDING),
+                ("active", ASCENDING),
+                ("is_public", ASCENDING),
+            ],
+            name="ix_provider_services_public_catalog",
+        )
         database.audit_events.create_index(
             [("timestamp", ASCENDING)],
             name="ix_audit_events_timestamp",

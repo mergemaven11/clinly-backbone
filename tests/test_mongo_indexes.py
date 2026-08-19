@@ -41,6 +41,8 @@ def test_init_indexes_is_idempotent(mongo_connector: MongoConnector) -> None:
     track_indexes = database.portal_tracks.index_information()
     entry_indexes = database.portal_entries.index_information()
     integration_indexes = database.integration_connections.index_information()
+    profile_indexes = database.provider_profiles.index_information()
+    service_indexes = database.provider_services.index_information()
 
     assert user_indexes["uq_users_email"]["unique"] is True
     assert user_indexes["uq_users_email"]["key"] == [("email", 1)]
@@ -64,6 +66,19 @@ def test_init_indexes_is_idempotent(mongo_connector: MongoConnector) -> None:
     assert connection_index["key"] == [
         ("provider_user_id", 1),
         ("integration_key", 1),
+    ]
+    assert profile_indexes["uq_provider_profiles_provider_user_id"]["unique"] is True
+    assert profile_indexes["uq_provider_profiles_public_slug"]["unique"] is True
+    assert profile_indexes["uq_provider_profiles_public_slug"]["sparse"] is True
+    assert service_indexes["ix_provider_services_provider_archived_name"]["key"] == [
+        ("provider_user_id", 1),
+        ("archived_at", 1),
+        ("name", 1),
+    ]
+    assert service_indexes["ix_provider_services_public_catalog"]["key"] == [
+        ("provider_user_id", 1),
+        ("active", 1),
+        ("is_public", 1),
     ]
 
 
@@ -108,6 +123,39 @@ def test_provider_can_have_only_one_connection_per_integration(
             {
                 "provider_user_id": provider_id,
                 "integration_key": "google_calendar",
-                "state": "SETUP_REQUIRED",
+                "state": "DISCONNECTED",
+            }
+        )
+
+
+def test_provider_profile_slug_and_owner_are_unique(
+    mongo_connector: MongoConnector,
+) -> None:
+    mongo_connector.init_indexes()
+    profiles = mongo_connector.db().provider_profiles
+    first_provider = ObjectId()
+    profiles.insert_one(
+        {
+            "provider_user_id": first_provider,
+            "display_name": "Provider One",
+            "public_slug": "provider-one",
+        }
+    )
+
+    with pytest.raises(DuplicateKeyError):
+        profiles.insert_one(
+            {
+                "provider_user_id": first_provider,
+                "display_name": "Duplicate Owner",
+                "public_slug": "another-slug",
+            }
+        )
+
+    with pytest.raises(DuplicateKeyError):
+        profiles.insert_one(
+            {
+                "provider_user_id": ObjectId(),
+                "display_name": "Duplicate Slug",
+                "public_slug": "provider-one",
             }
         )
