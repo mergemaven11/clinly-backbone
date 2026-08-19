@@ -4,7 +4,7 @@ from datetime import date, datetime
 from enum import StrEnum
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class DeliveryMode(StrEnum):
@@ -19,19 +19,28 @@ class LocationKind(StrEnum):
     IN_PERSON = "IN_PERSON"
 
 
+def _optional_trim(value: object) -> object:
+    if not isinstance(value, str):
+        return value
+    normalized = value.strip()
+    return normalized or None
+
+
 class ServiceLocation(BaseModel):
     label: str = Field(min_length=2, max_length=120)
     kind: LocationKind
     address: str | None = Field(default=None, max_length=300)
     public: bool = False
 
-    @field_validator("label", "address")
+    @field_validator("label", mode="before")
     @classmethod
-    def normalize_text(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        normalized = value.strip()
-        return normalized or None
+    def normalize_label(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
+
+    @field_validator("address", mode="before")
+    @classmethod
+    def normalize_address(cls, value: object) -> object:
+        return _optional_trim(value)
 
 
 class ProviderCredential(BaseModel):
@@ -41,13 +50,15 @@ class ProviderCredential(BaseModel):
     expires_on: date | None = None
     public: bool = False
 
-    @field_validator("name", "issuer", "reference")
+    @field_validator("name", mode="before")
     @classmethod
-    def normalize_text(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        normalized = value.strip()
-        return normalized or None
+    def normalize_name(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
+
+    @field_validator("issuer", "reference", mode="before")
+    @classmethod
+    def normalize_optional_text(cls, value: object) -> object:
+        return _optional_trim(value)
 
 
 class ProviderProfileUpsert(BaseModel):
@@ -70,21 +81,27 @@ class ProviderProfileUpsert(BaseModel):
     )
     is_public: bool = False
 
+    @field_validator("display_name", mode="before")
+    @classmethod
+    def normalize_display_name(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
+
     @field_validator(
-        "display_name",
         "business_name",
         "provider_type",
         "headline",
         "bio",
         "pronouns",
-        "locale",
+        mode="before",
     )
     @classmethod
-    def normalize_optional_text(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        normalized = value.strip()
-        return normalized or None
+    def normalize_optional_text(cls, value: object) -> object:
+        return _optional_trim(value)
+
+    @field_validator("locale", mode="before")
+    @classmethod
+    def normalize_locale(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
 
     @field_validator("categories")
     @classmethod
@@ -102,20 +119,33 @@ class ProviderProfileUpsert(BaseModel):
             normalized.append(value)
         return normalized
 
+    @field_validator("timezone", mode="before")
+    @classmethod
+    def normalize_timezone(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
+
     @field_validator("timezone")
     @classmethod
     def validate_timezone(cls, value: str) -> str:
-        normalized = value.strip()
         try:
-            ZoneInfo(normalized)
+            ZoneInfo(value)
         except ZoneInfoNotFoundError as exc:
             raise ValueError("timezone must be a valid IANA timezone") from exc
-        return normalized
+        return value
 
-    @field_validator("public_slug")
+    @field_validator("public_slug", mode="before")
     @classmethod
-    def normalize_slug(cls, value: str | None) -> str | None:
-        return value.lower().strip() if value else None
+    def normalize_slug(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+        normalized = value.strip().lower()
+        return normalized or None
+
+    @model_validator(mode="after")
+    def require_slug_for_public_profile(self) -> ProviderProfileUpsert:
+        if self.is_public and not self.public_slug:
+            raise ValueError("public_slug is required when publishing a profile")
+        return self
 
 
 class ProviderProfileResponse(ProviderProfileUpsert):
@@ -152,18 +182,20 @@ class ServiceCreate(BaseModel):
     is_public: bool = False
     active: bool = True
 
-    @field_validator("name", "description")
+    @field_validator("name", mode="before")
     @classmethod
-    def normalize_text(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        normalized = value.strip()
-        return normalized or None
+    def normalize_name(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
 
-    @field_validator("currency")
+    @field_validator("description", mode="before")
     @classmethod
-    def normalize_currency(cls, value: str) -> str:
-        return value.strip().upper()
+    def normalize_description(cls, value: object) -> object:
+        return _optional_trim(value)
+
+    @field_validator("currency", mode="before")
+    @classmethod
+    def normalize_currency(cls, value: object) -> object:
+        return value.strip().upper() if isinstance(value, str) else value
 
     @field_validator("location_labels")
     @classmethod
@@ -195,18 +227,23 @@ class ServiceUpdate(BaseModel):
     is_public: bool | None = None
     active: bool | None = None
 
-    @field_validator("name", "description")
+    @field_validator("name", mode="before")
     @classmethod
-    def normalize_text(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        normalized = value.strip()
-        return normalized or None
+    def normalize_name(cls, value: object) -> object:
+        return _optional_trim(value)
 
-    @field_validator("currency")
+    @field_validator("description", mode="before")
     @classmethod
-    def normalize_currency(cls, value: str | None) -> str | None:
-        return value.strip().upper() if value else None
+    def normalize_description(cls, value: object) -> object:
+        return _optional_trim(value)
+
+    @field_validator("currency", mode="before")
+    @classmethod
+    def normalize_currency(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+        normalized = value.strip().upper()
+        return normalized or None
 
     @field_validator("location_labels")
     @classmethod
@@ -235,6 +272,19 @@ class ServiceResponse(ServiceCreate):
     archived_at: datetime | None = None
 
 
+class PublicServiceResponse(BaseModel):
+    id: str
+    name: str
+    description: str | None = None
+    duration_minutes: int
+    price_minor: int
+    currency: str
+    delivery_mode: DeliveryMode
+    capacity: int
+    location_labels: list[str]
+    intake_required: bool
+
+
 class PublicProviderPage(BaseModel):
     profile: PublicProviderProfile
-    services: list[ServiceResponse]
+    services: list[PublicServiceResponse]
