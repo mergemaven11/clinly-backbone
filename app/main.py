@@ -12,12 +12,14 @@ from fastapi.responses import JSONResponse
 
 from app.api.routes.audit import router as audit_router
 from app.api.routes.auth import router as auth_router
+from app.api.routes.booking_services import router as booking_services_router
 from app.api.routes.conversations import router as conversations_router
 from app.api.routes.integrations import router as integrations_router
 from app.api.routes.messages import router as messages_router
 from app.api.routes.portal import router as portal_router
 from app.api.routes.provider_business import router as provider_business_router
 from app.api.routes.providers import router as providers_router
+from app.api.routes.scheduling import router as scheduling_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.db.mongo import MongoConnector
@@ -70,8 +72,9 @@ app = FastAPI(
     version=settings.api_version,
     description=(
         "Provider-platform API for authenticated relationships, encrypted messaging "
-        "and progress data, provider operations, and integration-ready services. "
-        "Legacy V1 clinical vocabulary remains available for backward compatibility."
+        "and progress data, provider operations, scheduling, and integration-ready "
+        "services. Legacy V1 clinical vocabulary remains available for backward "
+        "compatibility."
     ),
     lifespan=lifespan,
 )
@@ -89,6 +92,8 @@ if settings.cors_allowed_origins:
 app.include_router(auth_router)
 app.include_router(providers_router)
 app.include_router(provider_business_router)
+app.include_router(scheduling_router)
+app.include_router(booking_services_router)
 app.include_router(conversations_router)
 app.include_router(messages_router)
 app.include_router(portal_router)
@@ -157,7 +162,6 @@ async def request_log_middleware(request: Request, call_next):
     responses={200: {"description": "API process is running"}},
 )
 def health() -> dict[str, str]:
-    """Liveness check: the API process is running."""
     return {"status": "ok"}
 
 
@@ -170,7 +174,6 @@ def health() -> dict[str, str]:
     },
 )
 def ready(request: Request) -> dict[str, str]:
-    """Readiness check: return 503 while MongoDB is unavailable."""
     mongo: MongoConnector = request.app.state.mongo
     try:
         mongo.ping()

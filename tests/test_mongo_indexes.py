@@ -43,6 +43,9 @@ def test_init_indexes_is_idempotent(mongo_connector: MongoConnector) -> None:
     integration_indexes = database.integration_connections.index_information()
     profile_indexes = database.provider_profiles.index_information()
     service_indexes = database.provider_services.index_information()
+    schedule_indexes = database.provider_schedules.index_information()
+    calendar_indexes = database.booking_calendars.index_information()
+    booking_indexes = database.bookings.index_information()
 
     assert user_indexes["uq_users_email"]["unique"] is True
     assert user_indexes["uq_users_email"]["key"] == [("email", 1)]
@@ -79,6 +82,25 @@ def test_init_indexes_is_idempotent(mongo_connector: MongoConnector) -> None:
         ("provider_user_id", 1),
         ("active", 1),
         ("is_public", 1),
+    ]
+    assert schedule_indexes["uq_provider_schedules_provider_user_id"]["unique"] is True
+    assert calendar_indexes["uq_booking_calendars_provider_date"]["unique"] is True
+    assert calendar_indexes["uq_booking_calendars_provider_date"]["key"] == [
+        ("provider_user_id", 1),
+        ("local_date", 1),
+    ]
+    assert booking_indexes["ix_bookings_provider_starts_at"]["key"] == [
+        ("provider_user_id", 1),
+        ("starts_at", 1),
+    ]
+    assert booking_indexes["ix_bookings_participant_starts_at"]["key"] == [
+        ("participant_user_id", 1),
+        ("starts_at", 1),
+    ]
+    assert booking_indexes["ix_bookings_provider_status_starts_at"]["key"] == [
+        ("provider_user_id", 1),
+        ("status", 1),
+        ("starts_at", 1),
     ]
 
 
@@ -158,4 +180,23 @@ def test_provider_profile_slug_and_owner_are_unique(
                 "display_name": "Duplicate Slug",
                 "public_slug": "provider-one",
             }
+        )
+
+
+def test_provider_has_one_schedule_and_one_atomic_calendar_per_day(
+    mongo_connector: MongoConnector,
+) -> None:
+    mongo_connector.init_indexes()
+    database = mongo_connector.db()
+    provider_id = ObjectId()
+    database.provider_schedules.insert_one({"provider_user_id": provider_id})
+    with pytest.raises(DuplicateKeyError):
+        database.provider_schedules.insert_one({"provider_user_id": provider_id})
+
+    database.booking_calendars.insert_one(
+        {"provider_user_id": provider_id, "local_date": "2099-01-01"}
+    )
+    with pytest.raises(DuplicateKeyError):
+        database.booking_calendars.insert_one(
+            {"provider_user_id": provider_id, "local_date": "2099-01-01"}
         )

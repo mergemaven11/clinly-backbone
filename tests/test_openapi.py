@@ -22,7 +22,16 @@ EXPECTED_OPERATIONS = {
     ("/provider/services", "post"),
     ("/provider/services/{service_id}", "patch"),
     ("/provider/services/{service_id}", "delete"),
+    ("/provider/schedule", "get"),
+    ("/provider/schedule", "put"),
+    ("/availability", "get"),
+    ("/bookings", "post"),
+    ("/bookings/me", "get"),
+    ("/bookings/{booking_id}/reschedule", "patch"),
+    ("/bookings/{booking_id}/cancel", "post"),
+    ("/bookings/{booking_id}/status", "patch"),
     ("/public/providers/{slug}", "get"),
+    ("/public/providers/{slug}/services/{service_id}/slots", "get"),
     # Shared relationship platform surface
     ("/conversations", "post"),
     ("/conversations/me", "get"),
@@ -43,6 +52,7 @@ PUBLIC_OPERATIONS = {
     ("/auth/signup-provider", "post"),
     ("/auth/login", "post"),
     ("/public/providers/{slug}", "get"),
+    ("/public/providers/{slug}/services/{service_id}/slots", "get"),
     ("/health", "get"),
     ("/ready", "get"),
 }
@@ -97,8 +107,13 @@ def test_provider_integration_surface_is_documented_as_protected() -> None:
         assert {"401", "403"}.issubset(operation["responses"])
 
 
-def test_public_provider_page_does_not_require_bearer_auth() -> None:
+def test_public_provider_surfaces_do_not_require_bearer_auth() -> None:
     schema = app.openapi()
-    operation = schema["paths"]["/public/providers/{slug}"]["get"]
-    assert {"HTTPBearer": []} not in operation.get("security", [])
-    assert "404" in operation["responses"]
+    provider = schema["paths"]["/public/providers/{slug}"]["get"]
+    slots = schema["paths"][
+        "/public/providers/{slug}/services/{service_id}/slots"
+    ]["get"]
+    assert {"HTTPBearer": []} not in provider.get("security", [])
+    assert {"HTTPBearer": []} not in slots.get("security", [])
+    assert "404" in provider["responses"]
+    assert {"404", "422"}.issubset(slots["responses"])
