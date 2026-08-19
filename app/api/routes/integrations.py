@@ -73,7 +73,7 @@ def integration_connections(
     responses = [
         IntegrationConnectionResponse(
             integration_key=record["integration_key"],
-            state=IntegrationConnectionState(record.get("state", "SETUP_REQUIRED")),
+            state=IntegrationConnectionState(record.get("state", "AVAILABLE")),
             connected_at=record.get("connected_at"),
             updated_at=record.get("updated_at"),
             last_sync_at=record.get("last_sync_at"),
