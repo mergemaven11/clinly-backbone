@@ -8,8 +8,15 @@ BCRYPT_MAX_PASSWORD_BYTES = 72
 
 
 class UserRole(StrEnum):
+    # Legacy storage values retained for V1 data/API compatibility. V2 exposes
+    # provider/participant endpoint vocabulary without rewriting stored roles.
     THERAPIST = "THERAPIST"
     CLIENT = "CLIENT"
+
+
+class PlatformRole(StrEnum):
+    PROVIDER = "PROVIDER"
+    PARTICIPANT = "PARTICIPANT"
 
 
 class Credentials(BaseModel):
@@ -32,12 +39,20 @@ class Credentials(BaseModel):
         return value
 
 
-class TherapistSignup(Credentials):
+class ProviderSignup(Credentials):
     pass
 
 
-class ClientCreate(Credentials):
+class ParticipantCreate(Credentials):
     pass
+
+
+class TherapistSignup(ProviderSignup):
+    """Backward-compatible V1 request model."""
+
+
+class ClientCreate(ParticipantCreate):
+    """Backward-compatible V1 request model."""
 
 
 class LoginRequest(Credentials):
@@ -49,6 +64,14 @@ class UserResponse(BaseModel):
     email: str
     role: UserRole
     therapist_id: str | None = None
+    is_active: bool
+
+
+class PlatformUserResponse(BaseModel):
+    id: str
+    email: str
+    role: PlatformRole
+    provider_id: str | None = None
     is_active: bool
 
 

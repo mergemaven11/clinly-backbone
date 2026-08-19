@@ -13,8 +13,10 @@ from fastapi.responses import JSONResponse
 from app.api.routes.audit import router as audit_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.conversations import router as conversations_router
+from app.api.routes.integrations import router as integrations_router
 from app.api.routes.messages import router as messages_router
 from app.api.routes.portal import router as portal_router
+from app.api.routes.providers import router as providers_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.db.mongo import MongoConnector
@@ -66,9 +68,9 @@ app = FastAPI(
     title=settings.api_title,
     version=settings.api_version,
     description=(
-        "Clinly Backbone V1 provides authenticated relationship portals for care, "
-        "fitness, laser hair-removal tracking, secure messaging, encrypted journals, "
-        "and scoped audit/export APIs."
+        "Provider-platform API for authenticated relationships, encrypted messaging "
+        "and progress data, provider operations, and integration-ready services. "
+        "Legacy V1 clinical vocabulary remains available for backward compatibility."
     ),
     lifespan=lifespan,
 )
@@ -84,9 +86,11 @@ if settings.cors_allowed_origins:
     )
 
 app.include_router(auth_router)
+app.include_router(providers_router)
 app.include_router(conversations_router)
 app.include_router(messages_router)
 app.include_router(portal_router)
+app.include_router(integrations_router)
 app.include_router(audit_router)
 
 
