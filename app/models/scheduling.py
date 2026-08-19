@@ -5,6 +5,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.models.provider_business import DeliveryMode
+
 
 class AvailabilityExceptionKind(StrEnum):
     AVAILABLE = "AVAILABLE"
@@ -48,9 +50,7 @@ class AvailabilityRule(BaseModel):
         seen: set[str] = set()
         for raw in values:
             value = raw.strip()
-            if not value:
-                continue
-            if value in seen:
+            if not value or value in seen:
                 continue
             seen.add(value)
             normalized.append(value)
@@ -101,6 +101,21 @@ class ProviderScheduleResponse(ProviderScheduleUpsert):
     timezone: str
     created_at: datetime
     updated_at: datetime
+
+
+class BookableServiceResponse(BaseModel):
+    id: str
+    name: str
+    description: str | None = None
+    duration_minutes: int
+    price_minor: int
+    currency: str
+    delivery_mode: DeliveryMode
+    capacity: int
+    location_labels: list[str]
+    intake_required: bool
+    provider_user_id: str
+    provider_display_name: str | None = None
 
 
 class AvailabilitySlot(BaseModel):
