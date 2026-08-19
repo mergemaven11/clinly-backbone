@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.routes.audit import router as audit_router
 from app.api.routes.auth import router as auth_router
+from app.api.routes.booking_services import router as booking_services_router
 from app.api.routes.conversations import router as conversations_router
 from app.api.routes.integrations import router as integrations_router
 from app.api.routes.messages import router as messages_router
@@ -92,6 +93,7 @@ app.include_router(auth_router)
 app.include_router(providers_router)
 app.include_router(provider_business_router)
 app.include_router(scheduling_router)
+app.include_router(booking_services_router)
 app.include_router(conversations_router)
 app.include_router(messages_router)
 app.include_router(portal_router)
