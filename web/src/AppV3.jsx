@@ -10,15 +10,18 @@ import {
   clearSessionToken,
   readSessionToken,
 } from './brand'
+import BusinessWorkspace from './BusinessWorkspace'
 import IntegrationsWorkspace from './IntegrationsWorkspace'
 import MessagesWorkspace from './MessagesWorkspace'
 import Overview from './Overview'
 import PeopleWorkspace from './PeopleWorkspace'
 import { isProviderRole, TRACK_META } from './platformMeta'
 import PortalWorkspace from './PortalWorkspace'
+import PublicProviderPage from './PublicProviderPage'
 
 const NAV_ITEMS = [
   ['home', 'Overview'],
+  ['business', 'Business'],
   ['portal', 'Plans & progress'],
   ['messages', 'Messages'],
   ['clients', 'People'],
@@ -26,11 +29,12 @@ const NAV_ITEMS = [
   ['audit', 'Activity log'],
 ]
 
-const PROVIDER_ONLY_VIEWS = new Set(['clients', 'integrations', 'audit'])
+const PROVIDER_ONLY_VIEWS = new Set(['business', 'clients', 'integrations', 'audit'])
 
 function viewTitle(view) {
   return {
     home: 'Overview',
+    business: 'Business',
     portal: 'Plans & progress',
     messages: 'Messages',
     clients: 'People',
@@ -40,15 +44,21 @@ function viewTitle(view) {
 }
 
 function AppV3() {
+  const publicMatch = window.location.pathname.match(/^\/p\/([^/]+)\/?$/)
+  const publicSlug = publicMatch ? decodeURIComponent(publicMatch[1]) : ''
   const [token, setToken] = useState(() => readSessionToken())
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(Boolean(token))
+  const [loading, setLoading] = useState(Boolean(token) && !publicSlug)
 
   useEffect(() => {
-    document.title = `${APP_NAME} Portal`
-  }, [])
+    if (!publicSlug) document.title = `${APP_NAME} Portal`
+  }, [publicSlug])
 
   useEffect(() => {
+    if (publicSlug) {
+      setLoading(false)
+      return
+    }
     if (!token) {
       setUser(null)
       setLoading(false)
@@ -75,7 +85,7 @@ function AppV3() {
     return () => {
       cancelled = true
     }
-  }, [token])
+  }, [token, publicSlug])
 
   function handleToken(nextToken) {
     sessionStorage.setItem(SESSION_TOKEN_KEY, nextToken)
@@ -87,6 +97,8 @@ function AppV3() {
     setToken('')
     setUser(null)
   }
+
+  if (publicSlug) return <PublicProviderPage slug={publicSlug} />
 
   if (loading) {
     return (
@@ -314,6 +326,7 @@ function PlatformWorkspace({ token, user, onLogout }) {
                 onOpenIntegrations={() => setView('integrations')}
               />
             )}
+            {view === 'business' && isProvider && <BusinessWorkspace token={token} />}
             {view === 'portal' && (
               <PortalWorkspace
                 isProvider={isProvider}
