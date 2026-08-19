@@ -27,7 +27,6 @@ class MongoConnector:
         self._client: MongoClient | None = None
 
     def connect(self) -> None:
-        """Create the MongoDB client (the network connection remains lazy)."""
         self._client = MongoClient(
             self._uri,
             connectTimeoutMS=self._connect_timeout_ms,
@@ -35,7 +34,6 @@ class MongoConnector:
         )
 
     def ping(self) -> bool:
-        """Force server selection and verify connectivity."""
         if self._client is None:
             raise RuntimeError("Mongo client not initialized. Call connect() first.")
         try:
@@ -46,13 +44,11 @@ class MongoConnector:
             raise RuntimeError("Mongo unreachable or misconfigured.") from exc
 
     def db(self) -> Database:
-        """Return the configured database handle."""
         if self._client is None:
             raise RuntimeError("Mongo client not initialized. Call connect() first.")
         return self._client[self._db_name]
 
     def init_indexes(self) -> None:
-        """Create idempotent indexes required by the application data model."""
         database = self.db()
         database.users.create_index(
             [("email", ASCENDING)],
@@ -120,6 +116,28 @@ class MongoConnector:
             ],
             name="ix_provider_services_public_catalog",
         )
+        database.provider_schedules.create_index(
+            [("provider_user_id", ASCENDING)],
+            unique=True,
+            name="uq_provider_schedules_provider_user_id",
+        )
+        database.booking_calendars.create_index(
+            [("provider_user_id", ASCENDING), ("local_date", ASCENDING)],
+            unique=True,
+            name="uq_booking_calendars_provider_date",
+        )
+        database.bookings.create_index(
+            [("provider_user_id", ASCENDING), ("starts_at", ASCENDING)],
+            name="ix_bookings_provider_starts_at",
+        )
+        database.bookings.create_index(
+            [("participant_user_id", ASCENDING), ("starts_at", ASCENDING)],
+            name="ix_bookings_participant_starts_at",
+        )
+        database.bookings.create_index(
+            [("provider_user_id", ASCENDING), ("status", ASCENDING), ("starts_at", ASCENDING)],
+            name="ix_bookings_provider_status_starts_at",
+        )
         database.audit_events.create_index(
             [("timestamp", ASCENDING)],
             name="ix_audit_events_timestamp",
@@ -131,7 +149,6 @@ class MongoConnector:
         logger.info("Mongo indexes initialized.")
 
     def close(self) -> None:
-        """Close the Mongo client."""
         if self._client is not None:
             self._client.close()
             self._client = None
