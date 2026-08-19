@@ -143,6 +143,16 @@ class BookingReschedule(BaseModel):
         return value
 
 
+class BookingStatusUpdate(BaseModel):
+    status: BookingStatus
+
+    @model_validator(mode="after")
+    def provider_transition_only(self) -> BookingStatusUpdate:
+        if self.status not in {BookingStatus.COMPLETED, BookingStatus.NO_SHOW}:
+            raise ValueError("status must be COMPLETED or NO_SHOW")
+        return self
+
+
 class BookingResponse(BaseModel):
     id: str
     provider_user_id: str
