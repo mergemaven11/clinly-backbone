@@ -16,6 +16,13 @@ EXPECTED_OPERATIONS = {
     ("/participants", "get"),
     ("/integrations/catalog", "get"),
     ("/integrations/connections", "get"),
+    ("/provider/profile", "get"),
+    ("/provider/profile", "put"),
+    ("/provider/services", "get"),
+    ("/provider/services", "post"),
+    ("/provider/services/{service_id}", "patch"),
+    ("/provider/services/{service_id}", "delete"),
+    ("/public/providers/{slug}", "get"),
     # Shared relationship platform surface
     ("/conversations", "post"),
     ("/conversations/me", "get"),
@@ -31,13 +38,16 @@ EXPECTED_OPERATIONS = {
     ("/ready", "get"),
 }
 
-PROTECTED_OPERATIONS = EXPECTED_OPERATIONS - {
+PUBLIC_OPERATIONS = {
     ("/auth/signup-therapist", "post"),
     ("/auth/signup-provider", "post"),
     ("/auth/login", "post"),
+    ("/public/providers/{slug}", "get"),
     ("/health", "get"),
     ("/ready", "get"),
 }
+
+PROTECTED_OPERATIONS = EXPECTED_OPERATIONS - PUBLIC_OPERATIONS
 
 
 def test_openapi_contains_complete_platform_contract() -> None:
@@ -85,3 +95,10 @@ def test_provider_integration_surface_is_documented_as_protected() -> None:
         operation = schema["paths"][path]["get"]
         assert {"HTTPBearer": []} in operation["security"]
         assert {"401", "403"}.issubset(operation["responses"])
+
+
+def test_public_provider_page_does_not_require_bearer_auth() -> None:
+    schema = app.openapi()
+    operation = schema["paths"]["/public/providers/{slug}"]["get"]
+    assert {"HTTPBearer": []} not in operation.get("security", [])
+    assert "404" in operation["responses"]
