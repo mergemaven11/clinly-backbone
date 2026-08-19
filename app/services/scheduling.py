@@ -196,9 +196,23 @@ def generate_availability(
     ignore_booking_id: ObjectId | None = None,
 ) -> AvailabilityResponse:
     provider_user_id: ObjectId = service["provider_user_id"]
+    timezone_name = provider_timezone(database, provider_user_id)
+
+    # The current reservation primitive models one participant occupying provider
+    # time. Group/capacity-aware seat inventory is a separate scheduling mode and
+    # must not silently reuse 1:1 availability.
+    if service.get("capacity", 1) != 1:
+        return AvailabilityResponse(
+            service_id=str(service["_id"]),
+            provider_user_id=str(provider_user_id),
+            provider_timezone=timezone_name,
+            date_from=date_from,
+            date_to=date_to,
+            slots=[],
+        )
+
     schedule = load_schedule_payload(database, provider_user_id)
     policy = schedule.policy
-    timezone_name = provider_timezone(database, provider_user_id)
     tz = ZoneInfo(timezone_name)
     current = _utc(now or datetime.now(UTC))
     local_today = current.astimezone(tz).date()
