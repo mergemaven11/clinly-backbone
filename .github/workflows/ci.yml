@@ -74,10 +74,13 @@ jobs:
           node-version: "22"
 
       - name: Install frontend dependencies
-        run: npm install --prefix web --no-fund
+        run: npm ci --prefix web --no-fund
 
       - name: Audit frontend dependencies
         run: npm audit --prefix web --audit-level=high
+
+      - name: Test frontend
+        run: npm test --prefix web
 
       - name: Build frontend
         run: npm run build --prefix web

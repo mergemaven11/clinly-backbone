@@ -7,8 +7,8 @@ ARG VITE_APP_TAGLINE="One relationship. One connected place."
 ENV VITE_APP_NAME=${VITE_APP_NAME}
 ENV VITE_APP_TAGLINE=${VITE_APP_TAGLINE}
 
-COPY package.json ./
-RUN npm install --no-audit --no-fund
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
 COPY . .
 RUN npm run build
 
