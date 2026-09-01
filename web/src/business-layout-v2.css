@@ -1,9 +1,6 @@
-/*
- * Provider > Business layout v2
- *
- * The provider shell has a persistent sidebar, so the usable workspace can be
- * much narrower than the browser viewport. Keep the profile full-width and
- * give service management its own row instead of squeezing both together.
+/* Provider > Business layout
+ * Keep the page feeling like a dashboard while making every form row safe
+ * inside the real workspace width beside Clinly's persistent sidebar.
  */
 
 .business-page,
@@ -15,41 +12,96 @@
 .service-list,
 .service-card,
 .business-repeater,
-.business-repeater-row {
+.business-repeater-row,
+.form-grid,
+.form-grid > * {
   min-width: 0;
 }
 
-/* The profile is intentionally full width. This removes the form/card
-   collision seen at desktop widths with the Clinly sidebar present. */
+.business-page {
+  width: 100%;
+  max-width: 1480px;
+  margin-inline: auto;
+}
+
+/* Restore the useful dashboard composition: profile left, services right. */
 .business-layout {
-  grid-template-columns: minmax(0, 1fr) !important;
-  gap: 1.1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(360px, 0.82fr) !important;
+  gap: 1.15rem;
+  align-items: start;
+}
+
+.business-profile,
+.service-editor,
+.service-card {
+  overflow: hidden;
 }
 
 .business-profile {
   width: 100%;
 }
 
-/* Service creation and the existing catalog become a separate workspace. */
 .business-services {
   display: grid;
-  grid-template-columns: minmax(360px, 0.8fr) minmax(0, 1.2fr);
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.9rem;
   align-items: start;
 }
 
 .service-list {
+  display: grid;
   grid-template-columns: minmax(0, 1fr);
+  gap: 0.8rem;
   align-content: start;
 }
 
-/* Long location/credential rows should never try to render as five or six
-   tiny columns inside the profile card. */
+/* Keep ordinary paired fields compact, but never allow a child to force
+   the card wider than its grid track. */
+.business-page .form-grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.business-page input,
+.business-page select,
+.business-page textarea,
+.business-page label {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Repeater items are mini-cards. They no longer try to squeeze 5–6 controls
+   into one horizontal row. */
+.business-repeater {
+  gap: 0.7rem;
+}
+
 .business-repeater-row,
 .business-repeater-row.credential-row {
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  gap: 0.65rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 0.7fr) !important;
+  gap: 0.55rem 0.65rem;
+  align-items: center;
+  padding: 0.72rem;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.82);
 }
+
+/* Location row: label + type / address / visibility + remove */
+.business-repeater-row:not(.credential-row) > :nth-child(1) { grid-column: 1; }
+.business-repeater-row:not(.credential-row) > :nth-child(2) { grid-column: 2; }
+.business-repeater-row:not(.credential-row) > :nth-child(3) { grid-column: 1 / -1; }
+.business-repeater-row:not(.credential-row) > .business-check { grid-column: 1; }
+.business-repeater-row:not(.credential-row) > .text-button { grid-column: 2; justify-self: end; }
+
+/* Credential row: name + issuer / reference + expiry / visibility + remove */
+.business-repeater-row.credential-row > :nth-child(1) { grid-column: 1; }
+.business-repeater-row.credential-row > :nth-child(2) { grid-column: 2; }
+.business-repeater-row.credential-row > :nth-child(3) { grid-column: 1; }
+.business-repeater-row.credential-row > :nth-child(4) { grid-column: 2; }
+.business-repeater-row.credential-row > .business-check { grid-column: 1; }
+.business-repeater-row.credential-row > .text-button { grid-column: 2; justify-self: end; }
 
 .business-repeater-row > input,
 .business-repeater-row > select,
@@ -59,19 +111,24 @@
   max-width: 100%;
 }
 
-.business-repeater-row > .business-check {
+.business-check {
   justify-self: start;
   white-space: normal;
 }
 
-.business-repeater-row > .text-button {
-  grid-column: 2;
-  justify-self: end;
+/* Publishing stays compact instead of becoming another giant row. */
+.business-publish-box {
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.72fr);
+  align-items: stretch;
 }
 
-/* Service cards stay readable instead of compressing four facts into one row. */
-.service-facts {
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+.business-publish-box .business-switch {
+  height: 100%;
+}
+
+/* Service cards read like catalog cards rather than compressed spreadsheets. */
+.service-card {
+  padding: 1rem 1.05rem;
 }
 
 .service-card-top {
@@ -85,15 +142,41 @@
   overflow-wrap: anywhere;
 }
 
-/* The business page already establishes an inline-size container in
-   business.css. React to that actual workspace width rather than viewport. */
-@container (max-width: 1050px) {
+.service-facts {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.service-facts span {
+  min-width: 0;
+  padding: 0.72rem;
+}
+
+.service-actions {
+  padding-top: 0.15rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.13);
+}
+
+/* When the actual Business workspace gets tight, stack the two primary cards.
+   This is based on the content container, not the browser window. */
+@container (max-width: 1120px) {
+  .business-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .business-services {
+    grid-template-columns: minmax(340px, 0.78fr) minmax(0, 1.22fr);
+    gap: 1rem;
+  }
+}
+
+@container (max-width: 860px) {
   .business-services {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
-@container (max-width: 760px) {
+@container (max-width: 700px) {
+  .business-page .form-grid.two,
   .business-repeater-row,
   .business-repeater-row.credential-row,
   .business-publish-box,
@@ -101,8 +184,13 @@
     grid-template-columns: minmax(0, 1fr) !important;
   }
 
-  .business-repeater-row > .text-button {
-    grid-column: 1;
+  .business-repeater-row > *,
+  .business-repeater-row.credential-row > * {
+    grid-column: 1 !important;
+  }
+
+  .business-repeater-row > .text-button,
+  .business-repeater-row.credential-row > .text-button {
     justify-self: start;
   }
 }
