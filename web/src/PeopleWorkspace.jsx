@@ -9,6 +9,8 @@ function Empty({ title, detail }) {
 export default function PeopleWorkspace({ people, tracks, conversations, onCreatePerson, onMessage }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [query, setQuery] = useState('')
+  const [showCreate, setShowCreate] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -20,6 +22,7 @@ export default function PeopleWorkspace({ people, tracks, conversations, onCreat
       await onCreatePerson({ email, password })
       setEmail('')
       setPassword('')
+      setShowCreate(false)
     } catch (requestError) {
       setError(requestError.message)
     } finally {
@@ -27,29 +30,56 @@ export default function PeopleWorkspace({ people, tracks, conversations, onCreat
     }
   }
 
+  const normalizedQuery = query.trim().toLowerCase()
+  const visiblePeople = normalizedQuery
+    ? people.filter((person) => person.email.toLowerCase().includes(normalizedQuery))
+    : people
+
   return (
     <div className="page-stack">
-      <section className="section-card split-card">
+      <section className="people-hero">
         <div>
-          <span className="kicker">Add someone</span>
-          <h2>Create a connected portal</h2>
-          <p>Add a client, customer, member, candidate, patient, or other person you work with. Their experience can be shaped by the services and tracks you create.</p>
+          <span className="kicker">Relationship directory</span>
+          <h2>People</h2>
+          <p>Manage connected portals, relationship tracks, and conversations.</p>
         </div>
-        <form className="compact-form" onSubmit={submit}>
-          <label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
-          <label>Temporary password<input type="password" minLength="8" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
-          {error && <div className="notice error">{error}</div>}
-          <button className="primary-button" disabled={busy}>{busy ? 'Adding…' : 'Add person'}</button>
-        </form>
+        <button className="primary-button" type="button" onClick={() => setShowCreate((current) => !current)}>
+          {showCreate ? 'Close' : '+ Add person'}
+        </button>
       </section>
 
-      <section className="section-card">
-        <div className="section-heading">
-          <div><span className="kicker">Workspace</span><h3>People</h3></div>
-          <span className="count-pill">{people.length}</span>
-        </div>
+      {showCreate && (
+        <section className="section-card create-person-panel">
+          <div>
+            <span className="kicker">New portal</span>
+            <h3>Create a connected portal</h3>
+            <p>Add someone you work with and give them secure credentials for their private workspace.</p>
+          </div>
+          <form className="compact-form" onSubmit={submit}>
+            <label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
+            <label>Temporary password<input type="password" minLength="8" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
+            {error && <div className="notice error">{error}</div>}
+            <button className="primary-button" disabled={busy}>{busy ? 'Adding…' : 'Create portal'}</button>
+          </form>
+        </section>
+      )}
+
+      <label className="people-search">
+        <span className="search-icon" aria-hidden="true">⌕</span>
+        <span className="sr-only">Search people</span>
+        <input
+          type="search"
+          aria-label="Search people"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search people by email…"
+        />
+        <span className="count-pill">{visiblePeople.length}</span>
+      </label>
+
+      <section>
         <div className="client-grid">
-          {people.map((person) => {
+          {visiblePeople.map((person) => {
             const personTracks = tracks.filter((track) => track.client_user_id === person.id)
             const conversation = conversations.find((item) => item.client_id === person.id)
             return (
@@ -71,6 +101,7 @@ export default function PeopleWorkspace({ people, tracks, conversations, onCreat
           })}
         </div>
         {!people.length && <Empty title="No people yet" detail="Add the first person to your workspace above." />}
+        {people.length > 0 && !visiblePeople.length && <Empty title="No matches" detail="Try a different email or clear the search." />}
       </section>
     </div>
   )

@@ -20,13 +20,13 @@ import PortalWorkspace from './PortalWorkspace'
 import PublicProviderPage from './PublicProviderPage'
 
 const NAV_ITEMS = [
-  ['home', 'Overview'],
-  ['business', 'Business'],
-  ['portal', 'Plans & progress'],
-  ['messages', 'Messages'],
-  ['clients', 'People'],
-  ['integrations', 'Integrations'],
-  ['audit', 'Activity log'],
+  ['home', 'Overview', 'OV'],
+  ['business', 'Business', 'BU'],
+  ['portal', 'Plans & progress', 'PL'],
+  ['messages', 'Messages', 'MS'],
+  ['clients', 'People', 'PE'],
+  ['integrations', 'Integrations', 'IN'],
+  ['audit', 'Activity log', 'AL'],
 ]
 
 const PROVIDER_ONLY_VIEWS = new Set(['business', 'clients', 'integrations', 'audit'])
@@ -286,10 +286,11 @@ function PlatformWorkspace({ token, user, onLogout }) {
           <div className="brand-mark">{APP_INITIAL}</div>
           <span>{APP_NAME}</span>
         </div>
+        <span className="sidebar-label">Workspace</span>
         <nav>
-          {visibleNav.map(([key, label]) => (
+          {visibleNav.map(([key, label, icon]) => (
             <button key={key} className={view === key ? 'nav-button active' : 'nav-button'} type="button" onClick={() => setView(key)}>
-              <span className="nav-dot" />{label}
+              <span className="nav-icon" aria-hidden="true">{icon}</span><span>{label}</span>
             </button>
           ))}
         </nav>
