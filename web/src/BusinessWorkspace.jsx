@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { apiRequest } from './api'
 import './business.css'
+import './provider-business-workspace.css'
 
 const EMPTY_PROFILE = {
   display_name: '',
@@ -33,6 +34,9 @@ const EMPTY_SERVICE = {
   active: true,
 }
 
+const EMPTY_LOCATION = { label: '', kind: 'IN_PERSON', address: '', public: false }
+const EMPTY_CREDENTIAL = { name: '', issuer: '', reference: '', expires_on: null, public: false }
+
 function moneyFromMinor(value, currency) {
   try {
     return new Intl.NumberFormat(undefined, {
@@ -45,11 +49,11 @@ function moneyFromMinor(value, currency) {
 }
 
 function profileToForm(profile) {
-  if (!profile) return EMPTY_PROFILE
+  if (!profile) return { ...EMPTY_PROFILE }
   return {
     ...EMPTY_PROFILE,
     ...profile,
-    categories: profile.categories.join(', '),
+    categories: (profile.categories || []).join(', '),
     locations: profile.locations || [],
     credentials: profile.credentials || [],
   }
@@ -74,12 +78,12 @@ function profilePayload(values) {
 }
 
 function serviceToForm(service) {
-  if (!service) return EMPTY_SERVICE
+  if (!service) return { ...EMPTY_SERVICE }
   return {
     ...EMPTY_SERVICE,
     ...service,
     price: (service.price_minor / 100).toFixed(2),
-    location_labels: service.location_labels.join(', '),
+    location_labels: (service.location_labels || []).join(', '),
   }
 }
 
@@ -100,97 +104,130 @@ function servicePayload(values) {
   }
 }
 
-function LocationEditor({ locations, onChange }) {
-  function update(index, patch) {
-    onChange(locations.map((location, itemIndex) => itemIndex === index ? { ...location, ...patch } : location))
-  }
+function deliveryLabel(mode) {
+  return mode.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+function serviceStatus(service) {
+  if (!service.active) return { label: 'Archived', tone: 'muted' }
+  return service.is_public ? { label: 'Public', tone: 'public' } : { label: 'Private', tone: 'private' }
+}
+
+function locationMeta(location) {
+  const kind = location.kind === 'VIRTUAL' ? 'Virtual' : 'In person'
+  return [kind, location.address].filter(Boolean).join(' · ')
+}
+
+function credentialMeta(credential) {
+  const details = []
+  if (credential.issuer) details.push(credential.issuer)
+  if (credential.expires_on) details.push(`Expires ${credential.expires_on}`)
+  return details.join(' · ') || 'Provider-supplied credential'
+}
+
+function Drawer({ open, eyebrow, title, onClose, children, wide = false }) {
+  useEffect(() => {
+    if (!open) return undefined
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open, onClose])
+
+  if (!open) return null
 
   return (
-    <div className="business-repeater">
-      <div className="business-repeater-heading">
-        <span>Service locations</span>
-        <button type="button" className="small-button" onClick={() => onChange([...locations, { label: '', kind: 'IN_PERSON', address: '', public: false }])}>+ Location</button>
-      </div>
-      {locations.map((location, index) => (
-        <div className="business-repeater-row" key={`${index}-${location.label}`}>
-          <input aria-label="Location label" value={location.label} onChange={(event) => update(index, { label: event.target.value })} placeholder="Studio, Virtual, Downtown…" />
-          <select aria-label="Location type" value={location.kind} onChange={(event) => update(index, { kind: event.target.value })}>
-            <option value="IN_PERSON">In person</option>
-            <option value="VIRTUAL">Virtual</option>
-          </select>
-          <input aria-label="Location address" value={location.address || ''} onChange={(event) => update(index, { address: event.target.value || null })} placeholder="Address (optional)" />
-          <label className="business-check"><input type="checkbox" checked={location.public} onChange={(event) => update(index, { public: event.target.checked })} /> Public</label>
-          <button type="button" className="text-button danger-text" onClick={() => onChange(locations.filter((_, itemIndex) => itemIndex !== index))}>Remove</button>
+    <div className="business-drawer-backdrop" role="presentation" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) onClose()
+    }}>
+      <aside className={`business-drawer${wide ? ' wide' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
+        <div className="business-drawer-header">
+          <div>
+            <span className="business-eyebrow">{eyebrow}</span>
+            <h3>{title}</h3>
+          </div>
+          <button type="button" className="business-icon-button" aria-label="Close" onClick={onClose}>×</button>
         </div>
-      ))}
-      {!locations.length && <small className="business-hint">No locations added. Virtual-only providers can add a public “Virtual” location if useful.</small>}
+        <div className="business-drawer-body">{children}</div>
+      </aside>
     </div>
   )
 }
 
-function CredentialEditor({ credentials, onChange }) {
-  function update(index, patch) {
-    onChange(credentials.map((credential, itemIndex) => itemIndex === index ? { ...credential, ...patch } : credential))
-  }
-
+function SectionHeading({ title, description, action }) {
   return (
-    <div className="business-repeater">
-      <div className="business-repeater-heading">
-        <span>Credentials & certifications</span>
-        <button type="button" className="small-button" onClick={() => onChange([...credentials, { name: '', issuer: '', reference: '', expires_on: null, public: false }])}>+ Credential</button>
+    <div className="business-section-heading">
+      <div>
+        <h3>{title}</h3>
+        {description && <p>{description}</p>}
       </div>
-      {credentials.map((credential, index) => (
-        <div className="business-repeater-row credential-row" key={`${index}-${credential.name}`}>
-          <input aria-label="Credential name" value={credential.name} onChange={(event) => update(index, { name: event.target.value })} placeholder="Credential or certification" />
-          <input aria-label="Credential issuer" value={credential.issuer || ''} onChange={(event) => update(index, { issuer: event.target.value || null })} placeholder="Issuer" />
-          <input aria-label="Credential reference" value={credential.reference || ''} onChange={(event) => update(index, { reference: event.target.value || null })} placeholder="Reference (optional)" />
-          <input aria-label="Credential expiration" type="date" value={credential.expires_on || ''} onChange={(event) => update(index, { expires_on: event.target.value || null })} />
-          <label className="business-check"><input type="checkbox" checked={credential.public} onChange={(event) => update(index, { public: event.target.checked })} /> Public</label>
-          <button type="button" className="text-button danger-text" onClick={() => onChange(credentials.filter((_, itemIndex) => itemIndex !== index))}>Remove</button>
-        </div>
-      ))}
-      <small className="business-hint">Credential details are provider-supplied. Only mark a credential public when you want it displayed on your public profile.</small>
+      {action}
     </div>
   )
 }
 
-function ServiceCard({ service, onEdit, onArchive }) {
+function StatusPill({ label, tone }) {
+  return <span className={`business-status-pill ${tone}`}>{label}</span>
+}
+
+function PublicProfilePreview({ profile, services }) {
+  const publicServices = services.filter((service) => service.active && service.is_public)
+  const publicLocations = (profile?.locations || []).filter((location) => location.public)
+  const publicCredentials = (profile?.credentials || []).filter((credential) => credential.public)
+  const categories = profile?.categories || []
+  const displayName = profile?.business_name || profile?.display_name || 'Your business'
+
   return (
-    <article className="service-card">
-      <div className="service-card-top">
+    <div className="business-public-preview">
+      <div className="business-public-preview-top">
+        <div className="business-preview-avatar">{displayName.trim().charAt(0).toUpperCase() || 'C'}</div>
         <div>
-          <span className="kicker">{service.delivery_mode.replaceAll('_', ' ')}</span>
-          <h3>{service.name}</h3>
+          <span className="business-eyebrow">Public profile preview</span>
+          <h4>{displayName}</h4>
+          <p>{profile?.headline || 'Add a headline to tell people what you do.'}</p>
         </div>
-        <span className={service.is_public ? 'business-status public' : 'business-status private'}>{service.is_public ? 'Public' : 'Private'}</span>
       </div>
-      {service.description && <p>{service.description}</p>}
-      <div className="service-facts">
-        <span><strong>{moneyFromMinor(service.price_minor, service.currency)}</strong><small>Price</small></span>
-        <span><strong>{service.duration_minutes} min</strong><small>Duration</small></span>
-        <span><strong>{service.capacity}</strong><small>Capacity</small></span>
-        <span><strong>{service.intake_required ? 'Required' : 'No'}</strong><small>Intake</small></span>
+      {categories.length > 0 && <div className="business-chip-row">{categories.slice(0, 4).map((category) => <span key={category}>{category}</span>)}</div>}
+      <div className="business-preview-stats">
+        <span><strong>{publicServices.length}</strong><small>Services</small></span>
+        <span><strong>{publicLocations.length}</strong><small>Locations</small></span>
+        <span><strong>{publicCredentials.length}</strong><small>Credentials</small></span>
       </div>
-      {service.location_labels.length > 0 && <div className="mini-tags">{service.location_labels.map((label) => <span key={label}>{label}</span>)}</div>}
-      <div className="service-actions">
-        <button type="button" className="secondary-button" onClick={() => onEdit(service)}>Edit</button>
-        <button type="button" className="text-button danger-text" onClick={() => onArchive(service)}>Archive</button>
-      </div>
-    </article>
+      {profile?.bio && <p className="business-preview-bio">{profile.bio}</p>}
+      <small className="business-preview-note">Only items marked Public are represented here.</small>
+    </div>
   )
 }
 
 export default function BusinessWorkspace({ token }) {
   const [profile, setProfile] = useState(null)
-  const [profileForm, setProfileForm] = useState(EMPTY_PROFILE)
+  const [profileForm, setProfileForm] = useState({ ...EMPTY_PROFILE })
   const [services, setServices] = useState([])
-  const [serviceForm, setServiceForm] = useState(EMPTY_SERVICE)
+  const [serviceForm, setServiceForm] = useState({ ...EMPTY_SERVICE })
   const [editingServiceId, setEditingServiceId] = useState('')
   const [loading, setLoading] = useState(true)
   const [savingProfile, setSavingProfile] = useState(false)
   const [savingService, setSavingService] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+
+  const [profileEditorOpen, setProfileEditorOpen] = useState(false)
+  const [serviceEditorOpen, setServiceEditorOpen] = useState(false)
+  const [locationEditorOpen, setLocationEditorOpen] = useState(false)
+  const [credentialEditorOpen, setCredentialEditorOpen] = useState(false)
+  const [publishingEditorOpen, setPublishingEditorOpen] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false)
+
+  const [locationDraft, setLocationDraft] = useState({ ...EMPTY_LOCATION })
+  const [editingLocationIndex, setEditingLocationIndex] = useState(-1)
+  const [credentialDraft, setCredentialDraft] = useState({ ...EMPTY_CREDENTIAL })
+  const [editingCredentialIndex, setEditingCredentialIndex] = useState(-1)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -217,24 +254,37 @@ export default function BusinessWorkspace({ token }) {
     window.setTimeout(() => setNotice(''), 2600)
   }
 
-  async function saveProfile(event) {
-    event.preventDefault()
+  async function persistProfile(values, successMessage) {
     setSavingProfile(true)
     setError('')
     try {
       const saved = await apiRequest('/provider/profile', {
         token,
         method: 'PUT',
-        body: JSON.stringify(profilePayload(profileForm)),
+        body: JSON.stringify(profilePayload(values)),
       })
       setProfile(saved)
       setProfileForm(profileToForm(saved))
-      flash('Business profile saved.')
+      flash(successMessage)
+      return saved
     } catch (requestError) {
       setError(requestError.message)
+      return null
     } finally {
       setSavingProfile(false)
     }
+  }
+
+  async function saveProfile(event) {
+    event.preventDefault()
+    const saved = await persistProfile(profileForm, 'Business profile saved.')
+    if (saved) setProfileEditorOpen(false)
+  }
+
+  async function savePublishing(event) {
+    event.preventDefault()
+    const saved = await persistProfile(profileForm, profileForm.is_public ? 'Public profile settings saved.' : 'Profile visibility updated.')
+    if (saved) setPublishingEditorOpen(false)
   }
 
   async function saveService(event) {
@@ -244,15 +294,17 @@ export default function BusinessWorkspace({ token }) {
     try {
       const payload = servicePayload(serviceForm)
       if (!Number.isFinite(payload.price_minor) || payload.price_minor < 0) throw new Error('Enter a valid non-negative price.')
-      await apiRequest(editingServiceId ? `/provider/services/${editingServiceId}` : '/provider/services', {
+      const wasEditing = Boolean(editingServiceId)
+      await apiRequest(wasEditing ? `/provider/services/${editingServiceId}` : '/provider/services', {
         token,
-        method: editingServiceId ? 'PATCH' : 'POST',
+        method: wasEditing ? 'PATCH' : 'POST',
         body: JSON.stringify(payload),
       })
-      setServiceForm(EMPTY_SERVICE)
+      setServiceForm({ ...EMPTY_SERVICE })
       setEditingServiceId('')
+      setServiceEditorOpen(false)
       await load()
-      flash(editingServiceId ? 'Service updated.' : 'Service created.')
+      flash(wasEditing ? 'Service updated.' : 'Service created.')
     } catch (requestError) {
       setError(requestError.message)
     } finally {
@@ -261,12 +313,14 @@ export default function BusinessWorkspace({ token }) {
   }
 
   async function archiveService(service) {
+    if (!window.confirm(`Archive “${service.name}”?`)) return
     setError('')
     try {
       await apiRequest(`/provider/services/${service.id}`, { token, method: 'DELETE' })
       if (editingServiceId === service.id) {
         setEditingServiceId('')
-        setServiceForm(EMPTY_SERVICE)
+        setServiceForm({ ...EMPTY_SERVICE })
+        setServiceEditorOpen(false)
       }
       await load()
       flash(`${service.name} archived.`)
@@ -275,97 +329,356 @@ export default function BusinessWorkspace({ token }) {
     }
   }
 
+  function openNewService() {
+    setEditingServiceId('')
+    setServiceForm({ ...EMPTY_SERVICE })
+    setServiceEditorOpen(true)
+  }
+
   function editService(service) {
     setEditingServiceId(service.id)
     setServiceForm(serviceToForm(service))
-    document.getElementById('service-editor')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setServiceEditorOpen(true)
   }
 
-  const publicPath = profile?.is_public && profile.public_slug ? `/p/${profile.public_slug}` : ''
+  function openProfileEditor() {
+    setProfileForm(profileToForm(profile))
+    setProfileEditorOpen(true)
+  }
+
+  function openPublishingEditor() {
+    setProfileForm(profileToForm(profile))
+    setPublishingEditorOpen(true)
+  }
+
+  function openLocationEditor(index = -1) {
+    setEditingLocationIndex(index)
+    setLocationDraft(index >= 0 ? { ...profile.locations[index] } : { ...EMPTY_LOCATION })
+    setLocationEditorOpen(true)
+  }
+
+  async function saveLocation(event) {
+    event.preventDefault()
+    const values = profileToForm(profile)
+    const nextLocations = [...values.locations]
+    if (editingLocationIndex >= 0) nextLocations[editingLocationIndex] = locationDraft
+    else nextLocations.push(locationDraft)
+    values.locations = nextLocations
+    const saved = await persistProfile(values, editingLocationIndex >= 0 ? 'Location updated.' : 'Location added.')
+    if (saved) setLocationEditorOpen(false)
+  }
+
+  async function removeLocation(index) {
+    const location = profile.locations[index]
+    if (!window.confirm(`Remove “${location.label || 'this location'}”?`)) return
+    const values = profileToForm(profile)
+    values.locations = values.locations.filter((_, itemIndex) => itemIndex !== index)
+    await persistProfile(values, 'Location removed.')
+  }
+
+  function openCredentialEditor(index = -1) {
+    setEditingCredentialIndex(index)
+    setCredentialDraft(index >= 0 ? { ...profile.credentials[index] } : { ...EMPTY_CREDENTIAL })
+    setCredentialEditorOpen(true)
+  }
+
+  async function saveCredential(event) {
+    event.preventDefault()
+    const values = profileToForm(profile)
+    const nextCredentials = [...values.credentials]
+    if (editingCredentialIndex >= 0) nextCredentials[editingCredentialIndex] = credentialDraft
+    else nextCredentials.push(credentialDraft)
+    values.credentials = nextCredentials
+    const saved = await persistProfile(values, editingCredentialIndex >= 0 ? 'Credential updated.' : 'Credential added.')
+    if (saved) setCredentialEditorOpen(false)
+  }
+
+  async function removeCredential(index) {
+    const credential = profile.credentials[index]
+    if (!window.confirm(`Remove “${credential.name || 'this credential'}”?`)) return
+    const values = profileToForm(profile)
+    values.credentials = values.credentials.filter((_, itemIndex) => itemIndex !== index)
+    await persistProfile(values, 'Credential removed.')
+  }
+
+  const publicPath = profile?.public_slug ? `/p/${profile.public_slug}` : ''
   const publishedServices = useMemo(() => services.filter((service) => service.is_public && service.active).length, [services])
+  const publicLocations = useMemo(() => (profile?.locations || []).filter((location) => location.public).length, [profile])
+  const publicCredentials = useMemo(() => (profile?.credentials || []).filter((credential) => credential.public).length, [profile])
 
   if (loading) return <div className="empty-state"><div className="spinner" /><p>Loading your business workspace…</p></div>
 
   return (
-    <div className="business-page">
+    <div className="business-page business-workspace-v3">
       {notice && <div className="notice success">{notice}</div>}
       {error && <div className="notice error dismissible">{error}<button type="button" onClick={() => setError('')}>×</button></div>}
 
-      <section className="business-hero">
+      <header className="business-page-header">
         <div>
-          <span className="kicker">Provider business</span>
-          <h2>Shape the workspace around the business you actually run.</h2>
-          <p>Your identity, services, delivery modes, prices, and public visibility are data — not assumptions baked into the product.</p>
+          <span className="business-eyebrow">Provider workspace</span>
+          <h2>Business</h2>
+          <p>Manage how your business appears and what you offer.</p>
         </div>
-        <div className="business-hero-stats">
+        <div className="business-page-summary" aria-label="Business summary">
           <span><strong>{services.length}</strong><small>Services</small></span>
           <span><strong>{publishedServices}</strong><small>Public</small></span>
           <span><strong>{profile?.is_public ? 'Live' : 'Private'}</strong><small>Profile</small></span>
         </div>
+      </header>
+
+      <section className="business-section-card">
+        <SectionHeading
+          title="Business Profile"
+          description="Your core business identity, description, categories, and regional settings."
+          action={<button type="button" className="business-button secondary" onClick={openProfileEditor}>Edit profile</button>}
+        />
+        <div className="business-profile-summary">
+          <div className="business-profile-mark">{(profile?.business_name || profile?.display_name || 'C').trim().charAt(0).toUpperCase()}</div>
+          <div className="business-profile-copy">
+            <div className="business-profile-title-row">
+              <h4>{profile?.business_name || profile?.display_name}</h4>
+              {profile?.provider_type && <span>{profile.provider_type}</span>}
+            </div>
+            {profile?.headline && <strong>{profile.headline}</strong>}
+            <p>{profile?.bio || 'Add a short bio so clients and patients know what you do and who you work with.'}</p>
+            {(profile?.categories || []).length > 0 && <div className="business-chip-row">{profile.categories.map((category) => <span key={category}>{category}</span>)}</div>}
+          </div>
+        </div>
       </section>
 
-      <div className="business-layout">
-        <form className="business-profile section-card" onSubmit={saveProfile}>
-          <div className="section-heading">
-            <div><span className="kicker">Identity</span><h3>Business profile</h3><p>Nothing is public unless you turn it on.</p></div>
-            {publicPath && <a className="small-button public-profile-link" href={publicPath} target="_blank" rel="noreferrer">View public page ↗</a>}
-          </div>
+      <section className="business-section-card">
+        <SectionHeading
+          title="Services"
+          description="What clients or patients can book, buy, or request from you."
+          action={<button type="button" className="business-button primary" onClick={openNewService}>+ New service</button>}
+        />
 
-          <div className="form-grid two">
+        {services.length > 0 ? (
+          <div className="business-table-wrap">
+            <table className="business-services-table">
+              <thead>
+                <tr>
+                  <th>Service</th>
+                  <th>Delivery</th>
+                  <th>Price</th>
+                  <th>Duration</th>
+                  <th>Status</th>
+                  <th aria-label="Actions" />
+                </tr>
+              </thead>
+              <tbody>
+                {services.map((service) => {
+                  const status = serviceStatus(service)
+                  return (
+                    <tr key={service.id}>
+                      <td data-label="Service">
+                        <div className="business-service-name">
+                          <strong>{service.name}</strong>
+                          {service.description && <small>{service.description}</small>}
+                        </div>
+                      </td>
+                      <td data-label="Delivery">{deliveryLabel(service.delivery_mode)}</td>
+                      <td data-label="Price"><strong>{moneyFromMinor(service.price_minor, service.currency)}</strong></td>
+                      <td data-label="Duration">{service.duration_minutes} min</td>
+                      <td data-label="Status"><StatusPill label={status.label} tone={status.tone} /></td>
+                      <td data-label="Actions">
+                        <div className="business-row-actions">
+                          <button type="button" onClick={() => editService(service)}>Edit</button>
+                          {service.active && <button type="button" className="danger" onClick={() => archiveService(service)}>Archive</button>}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="business-empty-state">
+            <strong>No services yet</strong>
+            <p>Create your first service without turning this page into a giant form.</p>
+            <button type="button" className="business-button secondary" onClick={openNewService}>Create service</button>
+          </div>
+        )}
+      </section>
+
+      <div className="business-two-column-sections">
+        <section className="business-section-card">
+          <SectionHeading
+            title="Locations"
+            description="Places where you deliver services."
+            action={<button type="button" className="business-button secondary" onClick={() => openLocationEditor()}>+ Add location</button>}
+          />
+          <div className="business-simple-list">
+            {(profile?.locations || []).map((location, index) => (
+              <article key={`${location.label}-${index}`} className="business-list-item">
+                <div>
+                  <div className="business-list-title-row">
+                    <strong>{location.label || 'Untitled location'}</strong>
+                    <StatusPill label={location.public ? 'Public' : 'Private'} tone={location.public ? 'public' : 'private'} />
+                  </div>
+                  <p>{locationMeta(location)}</p>
+                </div>
+                <div className="business-row-actions">
+                  <button type="button" onClick={() => openLocationEditor(index)}>Edit</button>
+                  <button type="button" className="danger" onClick={() => removeLocation(index)}>Remove</button>
+                </div>
+              </article>
+            ))}
+            {!profile?.locations?.length && <div className="business-inline-empty">No locations added yet.</div>}
+          </div>
+        </section>
+
+        <section className="business-section-card">
+          <SectionHeading
+            title="Credentials"
+            description="Licenses, certifications, and professional credentials you choose to show."
+            action={<button type="button" className="business-button secondary" onClick={() => openCredentialEditor()}>+ Add credential</button>}
+          />
+          <div className="business-simple-list">
+            {(profile?.credentials || []).map((credential, index) => (
+              <article key={`${credential.name}-${index}`} className="business-list-item">
+                <div>
+                  <div className="business-list-title-row">
+                    <strong>{credential.name || 'Untitled credential'}</strong>
+                    <StatusPill label={credential.public ? 'Public' : 'Private'} tone={credential.public ? 'public' : 'private'} />
+                  </div>
+                  <p>{credentialMeta(credential)}</p>
+                </div>
+                <div className="business-row-actions">
+                  <button type="button" onClick={() => openCredentialEditor(index)}>Edit</button>
+                  <button type="button" className="danger" onClick={() => removeCredential(index)}>Remove</button>
+                </div>
+              </article>
+            ))}
+            {!profile?.credentials?.length && <div className="business-inline-empty">No credentials added yet.</div>}
+          </div>
+        </section>
+      </div>
+
+      <section className="business-section-card business-public-section">
+        <div className="business-public-controls">
+          <SectionHeading
+            title="Public Profile"
+            description="Control what clients and patients see before they contact or book with you."
+          />
+          <div className="business-public-status-card">
+            <div>
+              <span className="business-eyebrow">Profile status</span>
+              <div className="business-public-status-line">
+                <StatusPill label={profile?.is_public ? 'Live' : 'Private'} tone={profile?.is_public ? 'public' : 'private'} />
+                <strong>{publicPath || 'No public URL set'}</strong>
+              </div>
+              <small>{publishedServices} public services · {publicLocations} public locations · {publicCredentials} public credentials</small>
+            </div>
+            <div className="business-public-actions">
+              <button type="button" className="business-button secondary" onClick={() => setPreviewOpen(true)}>Preview profile</button>
+              <button type="button" className="business-button primary" onClick={openPublishingEditor}>Publishing settings</button>
+            </div>
+          </div>
+        </div>
+        <PublicProfilePreview profile={profile} services={services} />
+      </section>
+
+      <Drawer open={profileEditorOpen} eyebrow="Business profile" title="Edit profile" onClose={() => setProfileEditorOpen(false)} wide>
+        <form className="business-editor-form" onSubmit={saveProfile}>
+          <div className="business-form-grid two">
             <label>Display name<input value={profileForm.display_name} onChange={(event) => setProfileForm((current) => ({ ...current, display_name: event.target.value }))} required /></label>
             <label>Business name<input value={profileForm.business_name} onChange={(event) => setProfileForm((current) => ({ ...current, business_name: event.target.value }))} placeholder="Optional business or studio name" /></label>
-            <label>Provider type<input value={profileForm.provider_type} onChange={(event) => setProfileForm((current) => ({ ...current, provider_type: event.target.value }))} placeholder="Coach, consultant, esthetician, trainer…" /></label>
+            <label>Provider type<input value={profileForm.provider_type} onChange={(event) => setProfileForm((current) => ({ ...current, provider_type: event.target.value }))} placeholder="Coach, therapist, trainer, consultant…" /></label>
             <label>Pronouns<input value={profileForm.pronouns} onChange={(event) => setProfileForm((current) => ({ ...current, pronouns: event.target.value }))} placeholder="Optional" /></label>
           </div>
-          <label>Headline<input value={profileForm.headline} onChange={(event) => setProfileForm((current) => ({ ...current, headline: event.target.value }))} placeholder="A short promise or description of your work" /></label>
-          <label>Bio<textarea rows="5" value={profileForm.bio} onChange={(event) => setProfileForm((current) => ({ ...current, bio: event.target.value }))} placeholder="Tell people what you do and who you work with." /></label>
-          <label>Categories<input value={profileForm.categories} onChange={(event) => setProfileForm((current) => ({ ...current, categories: event.target.value }))} placeholder="Strength, Wellness, Career coaching" /><small>Comma-separated; these become future discovery filters.</small></label>
-          <div className="form-grid two">
+          <label>Headline<input value={profileForm.headline} onChange={(event) => setProfileForm((current) => ({ ...current, headline: event.target.value }))} placeholder="A short description of your work" /></label>
+          <label>Bio<textarea rows="6" value={profileForm.bio} onChange={(event) => setProfileForm((current) => ({ ...current, bio: event.target.value }))} placeholder="Tell people what you do and who you work with." /></label>
+          <label>Categories<input value={profileForm.categories} onChange={(event) => setProfileForm((current) => ({ ...current, categories: event.target.value }))} placeholder="Strength, wellness, career coaching" /><small>Comma-separated.</small></label>
+          <div className="business-form-grid two">
             <label>Timezone<input value={profileForm.timezone} onChange={(event) => setProfileForm((current) => ({ ...current, timezone: event.target.value }))} placeholder="America/New_York" required /></label>
             <label>Locale<input value={profileForm.locale} onChange={(event) => setProfileForm((current) => ({ ...current, locale: event.target.value }))} placeholder="en-US" required /></label>
           </div>
-
-          <LocationEditor locations={profileForm.locations} onChange={(locations) => setProfileForm((current) => ({ ...current, locations }))} />
-          <CredentialEditor credentials={profileForm.credentials} onChange={(credentials) => setProfileForm((current) => ({ ...current, credentials }))} />
-
-          <div className="business-publish-box">
-            <label>Public URL slug<input value={profileForm.public_slug} onChange={(event) => setProfileForm((current) => ({ ...current, public_slug: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') }))} placeholder="your-business-name" /></label>
-            <label className="business-switch"><input type="checkbox" checked={profileForm.is_public} onChange={(event) => setProfileForm((current) => ({ ...current, is_public: event.target.checked }))} /><span><strong>Publish profile</strong><small>Only public locations, credentials, and services are shown.</small></span></label>
+          <div className="business-editor-footer">
+            <button type="button" className="business-button secondary" onClick={() => setProfileEditorOpen(false)}>Cancel</button>
+            <button className="business-button primary" disabled={savingProfile}>{savingProfile ? 'Saving…' : 'Save profile'}</button>
           </div>
-
-          <button className="primary-button" disabled={savingProfile}>{savingProfile ? 'Saving…' : 'Save business profile'}</button>
         </form>
+      </Drawer>
 
-        <div className="business-services">
-          <form id="service-editor" className="section-card service-editor" onSubmit={saveService}>
-            <div className="section-heading">
-              <div><span className="kicker">Catalog</span><h3>{editingServiceId ? 'Edit service' : 'New service'}</h3></div>
-              {editingServiceId && <button type="button" className="text-button" onClick={() => { setEditingServiceId(''); setServiceForm(EMPTY_SERVICE) }}>Cancel edit</button>}
-            </div>
-            <label>Service name<input value={serviceForm.name} onChange={(event) => setServiceForm((current) => ({ ...current, name: event.target.value }))} placeholder="Strategy session, training package, consultation…" required /></label>
-            <label>Description<textarea rows="3" value={serviceForm.description} onChange={(event) => setServiceForm((current) => ({ ...current, description: event.target.value }))} /></label>
-            <div className="form-grid two">
-              <label>Duration (minutes)<input type="number" min="5" max="1440" value={serviceForm.duration_minutes} onChange={(event) => setServiceForm((current) => ({ ...current, duration_minutes: event.target.value }))} required /></label>
-              <label>Delivery<select value={serviceForm.delivery_mode} onChange={(event) => setServiceForm((current) => ({ ...current, delivery_mode: event.target.value }))}><option value="VIRTUAL">Virtual</option><option value="IN_PERSON">In person</option><option value="HYBRID">Hybrid</option><option value="ASYNC">Async</option></select></label>
-              <label>Price<input type="number" min="0" step="0.01" value={serviceForm.price} onChange={(event) => setServiceForm((current) => ({ ...current, price: event.target.value }))} placeholder="75.00" required /></label>
-              <label>Currency<input maxLength="3" value={serviceForm.currency} onChange={(event) => setServiceForm((current) => ({ ...current, currency: event.target.value.toUpperCase() }))} required /></label>
-              <label>Capacity<input type="number" min="1" max="500" value={serviceForm.capacity} onChange={(event) => setServiceForm((current) => ({ ...current, capacity: event.target.value }))} required /></label>
-              <label>Locations<input value={serviceForm.location_labels} onChange={(event) => setServiceForm((current) => ({ ...current, location_labels: event.target.value }))} placeholder="Virtual, Downtown studio" /></label>
-            </div>
-            <div className="business-toggle-grid">
-              <label className="business-switch"><input type="checkbox" checked={serviceForm.intake_required} onChange={(event) => setServiceForm((current) => ({ ...current, intake_required: event.target.checked }))} /><span><strong>Intake required</strong><small>Hook for forms/intake workflows.</small></span></label>
-              <label className="business-switch"><input type="checkbox" checked={serviceForm.is_public} onChange={(event) => setServiceForm((current) => ({ ...current, is_public: event.target.checked }))} /><span><strong>Public service</strong><small>Show on your published profile.</small></span></label>
-              <label className="business-switch"><input type="checkbox" checked={serviceForm.active} onChange={(event) => setServiceForm((current) => ({ ...current, active: event.target.checked }))} /><span><strong>Active</strong><small>Available to future booking flows.</small></span></label>
-            </div>
-            <button className="primary-button" disabled={savingService}>{savingService ? 'Saving…' : editingServiceId ? 'Update service' : 'Create service'}</button>
-          </form>
+      <Drawer open={serviceEditorOpen} eyebrow="Services" title={editingServiceId ? 'Edit service' : 'New service'} onClose={() => setServiceEditorOpen(false)} wide>
+        <form className="business-editor-form" onSubmit={saveService}>
+          <label>Service name<input value={serviceForm.name} onChange={(event) => setServiceForm((current) => ({ ...current, name: event.target.value }))} placeholder="Progress planning session" required /></label>
+          <label>Description<textarea rows="4" value={serviceForm.description} onChange={(event) => setServiceForm((current) => ({ ...current, description: event.target.value }))} placeholder="What is included and who is this for?" /></label>
+          <div className="business-form-grid two">
+            <label>Delivery<select value={serviceForm.delivery_mode} onChange={(event) => setServiceForm((current) => ({ ...current, delivery_mode: event.target.value }))}><option value="VIRTUAL">Virtual</option><option value="IN_PERSON">In person</option><option value="HYBRID">Hybrid</option><option value="ASYNC">Async</option></select></label>
+            <label>Duration (minutes)<input type="number" min="5" max="1440" value={serviceForm.duration_minutes} onChange={(event) => setServiceForm((current) => ({ ...current, duration_minutes: event.target.value }))} required /></label>
+            <label>Price<input type="number" min="0" step="0.01" value={serviceForm.price} onChange={(event) => setServiceForm((current) => ({ ...current, price: event.target.value }))} placeholder="95.00" required /></label>
+            <label>Currency<input maxLength="3" value={serviceForm.currency} onChange={(event) => setServiceForm((current) => ({ ...current, currency: event.target.value.toUpperCase() }))} required /></label>
+            <label>Capacity<input type="number" min="1" max="500" value={serviceForm.capacity} onChange={(event) => setServiceForm((current) => ({ ...current, capacity: event.target.value }))} required /></label>
+            <label>Locations<input value={serviceForm.location_labels} onChange={(event) => setServiceForm((current) => ({ ...current, location_labels: event.target.value }))} placeholder="Virtual, Midtown Studio" /></label>
+          </div>
+          <div className="business-switch-stack">
+            <label className="business-setting-switch"><input type="checkbox" checked={serviceForm.intake_required} onChange={(event) => setServiceForm((current) => ({ ...current, intake_required: event.target.checked }))} /><span><strong>Intake required</strong><small>Require intake before this service is fulfilled.</small></span></label>
+            <label className="business-setting-switch"><input type="checkbox" checked={serviceForm.is_public} onChange={(event) => setServiceForm((current) => ({ ...current, is_public: event.target.checked }))} /><span><strong>Public service</strong><small>Show this service on your public profile.</small></span></label>
+            <label className="business-setting-switch"><input type="checkbox" checked={serviceForm.active} onChange={(event) => setServiceForm((current) => ({ ...current, active: event.target.checked }))} /><span><strong>Active</strong><small>Keep this service available to current and future workflows.</small></span></label>
+          </div>
+          <div className="business-editor-footer">
+            <button type="button" className="business-button secondary" onClick={() => setServiceEditorOpen(false)}>Cancel</button>
+            <button className="business-button primary" disabled={savingService}>{savingService ? 'Saving…' : editingServiceId ? 'Update service' : 'Create service'}</button>
+          </div>
+        </form>
+      </Drawer>
 
-          <section className="service-list">
-            {services.map((service) => <ServiceCard key={service.id} service={service} onEdit={editService} onArchive={archiveService} />)}
-            {!services.length && <div className="empty section-card"><span className="empty-icon">○</span><strong>No services yet</strong><p>Create the first offer your business can schedule and sell.</p></div>}
-          </section>
+      <Drawer open={locationEditorOpen} eyebrow="Locations" title={editingLocationIndex >= 0 ? 'Edit location' : 'Add location'} onClose={() => setLocationEditorOpen(false)}>
+        <form className="business-editor-form" onSubmit={saveLocation}>
+          <label>Location name<input value={locationDraft.label} onChange={(event) => setLocationDraft((current) => ({ ...current, label: event.target.value }))} placeholder="Midtown Studio" required /></label>
+          <label>Delivery type<select value={locationDraft.kind} onChange={(event) => setLocationDraft((current) => ({ ...current, kind: event.target.value }))}><option value="IN_PERSON">In person</option><option value="VIRTUAL">Virtual</option></select></label>
+          <label>Address or area<input value={locationDraft.address || ''} onChange={(event) => setLocationDraft((current) => ({ ...current, address: event.target.value || null }))} placeholder="Atlanta, GA" /></label>
+          <label className="business-setting-switch"><input type="checkbox" checked={locationDraft.public} onChange={(event) => setLocationDraft((current) => ({ ...current, public: event.target.checked }))} /><span><strong>Public location</strong><small>Show this location on your public profile.</small></span></label>
+          <div className="business-editor-footer">
+            <button type="button" className="business-button secondary" onClick={() => setLocationEditorOpen(false)}>Cancel</button>
+            <button className="business-button primary" disabled={savingProfile}>{savingProfile ? 'Saving…' : 'Save location'}</button>
+          </div>
+        </form>
+      </Drawer>
+
+      <Drawer open={credentialEditorOpen} eyebrow="Credentials" title={editingCredentialIndex >= 0 ? 'Edit credential' : 'Add credential'} onClose={() => setCredentialEditorOpen(false)}>
+        <form className="business-editor-form" onSubmit={saveCredential}>
+          <label>Credential name<input value={credentialDraft.name} onChange={(event) => setCredentialDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Certified Personal Trainer" required /></label>
+          <label>Issuer<input value={credentialDraft.issuer || ''} onChange={(event) => setCredentialDraft((current) => ({ ...current, issuer: event.target.value || null }))} placeholder="Issuing organization" /></label>
+          <label>Reference<input value={credentialDraft.reference || ''} onChange={(event) => setCredentialDraft((current) => ({ ...current, reference: event.target.value || null }))} placeholder="Optional license or certificate reference" /></label>
+          <label>Expiration<input type="date" value={credentialDraft.expires_on || ''} onChange={(event) => setCredentialDraft((current) => ({ ...current, expires_on: event.target.value || null }))} /></label>
+          <label className="business-setting-switch"><input type="checkbox" checked={credentialDraft.public} onChange={(event) => setCredentialDraft((current) => ({ ...current, public: event.target.checked }))} /><span><strong>Public credential</strong><small>Show this credential on your public profile.</small></span></label>
+          <div className="business-editor-footer">
+            <button type="button" className="business-button secondary" onClick={() => setCredentialEditorOpen(false)}>Cancel</button>
+            <button className="business-button primary" disabled={savingProfile}>{savingProfile ? 'Saving…' : 'Save credential'}</button>
+          </div>
+        </form>
+      </Drawer>
+
+      <Drawer open={publishingEditorOpen} eyebrow="Public profile" title="Publishing settings" onClose={() => setPublishingEditorOpen(false)}>
+        <form className="business-editor-form" onSubmit={savePublishing}>
+          <label>Public URL slug<input value={profileForm.public_slug} onChange={(event) => setProfileForm((current) => ({ ...current, public_slug: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') }))} placeholder="your-business-name" /><small>Your profile URL will be /p/{profileForm.public_slug || 'your-business-name'}.</small></label>
+          <label className="business-setting-switch"><input type="checkbox" checked={profileForm.is_public} onChange={(event) => setProfileForm((current) => ({ ...current, is_public: event.target.checked }))} /><span><strong>Publish profile</strong><small>Only services, locations, and credentials marked Public are shown.</small></span></label>
+          <div className="business-publishing-checklist">
+            <span><strong>{publishedServices}</strong><small>Public services</small></span>
+            <span><strong>{publicLocations}</strong><small>Public locations</small></span>
+            <span><strong>{publicCredentials}</strong><small>Public credentials</small></span>
+          </div>
+          <div className="business-editor-footer">
+            <button type="button" className="business-button secondary" onClick={() => setPublishingEditorOpen(false)}>Cancel</button>
+            <button className="business-button primary" disabled={savingProfile}>{savingProfile ? 'Saving…' : 'Save publishing settings'}</button>
+          </div>
+        </form>
+      </Drawer>
+
+      <Drawer open={previewOpen} eyebrow="Public profile" title="Client / patient preview" onClose={() => setPreviewOpen(false)} wide>
+        <div className="business-preview-drawer-content">
+          <PublicProfilePreview profile={profile} services={services} />
+          {profile?.is_public && publicPath ? (
+            <a className="business-button primary as-link" href={publicPath} target="_blank" rel="noreferrer">Open live profile ↗</a>
+          ) : (
+            <p className="business-preview-private-note">This is a private preview. Publish the profile and set a URL when you are ready to make it visible.</p>
+          )}
         </div>
-      </div>
+      </Drawer>
     </div>
   )
 }
