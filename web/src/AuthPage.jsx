@@ -64,7 +64,7 @@ export default function AuthPage({ onToken }) {
           <span className="kicker">{APP_TAGLINE}</span>
           <h1>Run the relationship, not a pile of disconnected tools.</h1>
           <p>
-            Bring messaging, progress tracking, shared plans, notes, and ongoing service relationships into one adaptable provider workspace.
+            Clinly is built for service professionals — from Botox and aesthetics specialists to fitness trainers, coaches, consultants, wellness providers, and more. Bring messaging, progress tracking, shared plans, notes, and ongoing service relationships into one adaptable workspace.
           </p>
           <div className="auth-feature-grid">
             <article><strong>Organize</strong><span>Keep every relationship in context</span></article>
@@ -81,10 +81,10 @@ export default function AuthPage({ onToken }) {
           <h2>{IS_DEMO_MODE ? 'Explore the Clinly workspace' : mode === 'login' ? 'Sign in to your workspace' : `Create your ${APP_NAME} workspace`}</h2>
           <p className="muted">
             {IS_DEMO_MODE
-              ? 'Choose the seeded provider or patient account. Everything shown is fictional demo data.'
+              ? 'Choose the seeded provider or client/patient account. A provider can be a Botox or aesthetics specialist, fitness trainer, coach, consultant, wellness professional, or another service business. Everything shown is fictional demo data.'
               : mode === 'login'
               ? 'People you work with can use the credentials created for their portal.'
-              : 'Provider accounts can add people and create flexible relationship tracks.'}
+              : 'Provider accounts are for service professionals across aesthetics, fitness, coaching, consulting, wellness, and more.'}
           </p>
 
           {IS_DEMO_MODE && (
@@ -92,10 +92,10 @@ export default function AuthPage({ onToken }) {
               <span>Choose a demo view</span>
               <div className="demo-account-actions">
                 <button type="button" onClick={() => openDemo(DEMO_PROVIDER_EMAIL)} disabled={busy}>
-                  <strong>Provider portal</strong><small>Manage people, business, tracks, and activity</small>
+                  <strong>Provider portal</strong><small>Manage services, people, tracks, messaging, and activity</small>
                 </button>
                 <button type="button" onClick={() => openDemo(DEMO_PATIENT_EMAIL)} disabled={busy}>
-                  <strong>Patient portal</strong><small>View personal tracks, check-ins, and messages</small>
+                  <strong>Client / patient portal</strong><small>View personal tracks, check-ins, and messages</small>
                 </button>
               </div>
               <code>Password: {DEMO_PASSWORD}</code>
