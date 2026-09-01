@@ -1,3 +1,5 @@
+import { demoApiRequest, downloadDemoAudit, IS_DEMO_MODE } from './demoApi'
+
 const API_BASE = '/api'
 
 function messageFromBody(body, fallback) {
@@ -11,6 +13,8 @@ function messageFromBody(body, fallback) {
 }
 
 export async function apiRequest(path, options = {}) {
+  if (IS_DEMO_MODE) return demoApiRequest(path, options)
+
   const { token, headers = {}, ...rest } = options
   const response = await fetch(`${API_BASE}${path}`, {
     ...rest,
@@ -34,6 +38,11 @@ export async function apiRequest(path, options = {}) {
 }
 
 export async function downloadAudit({ token, clientId }) {
+  if (IS_DEMO_MODE) {
+    downloadDemoAudit(clientId)
+    return
+  }
+
   const params = new URLSearchParams({ subject_user_id: clientId })
   const response = await fetch(`${API_BASE}/export?${params.toString()}`, {
     method: 'POST',

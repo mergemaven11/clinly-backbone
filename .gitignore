@@ -49,6 +49,9 @@ secrets/
 *.key
 *.crt
 
+# Netlify CLI local project state
+.netlify/
+
 # =========================
 # Mongo (Local Dev)
 # =========================

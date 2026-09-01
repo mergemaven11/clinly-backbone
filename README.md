@@ -1,8 +1,31 @@
 # Clinly
 
-Secure relationship portal with a React web app and FastAPI + MongoDB backbone.
+**BETA** · Secure provider and patient relationship portal with a React web app and FastAPI + MongoDB backbone.
 
-**Current V1 line: 1.0.x**
+**[Open the live demo](https://clinly-demo.netlify.app/)** · **[View the source](https://github.com/mergemaven11/clinly-backbone)**
+
+![Clinly provider and patient demo access](docs/screenshots/clinly-demo-access.jpg)
+
+## Live demo
+
+The public Netlify deployment is a safe, browser-side product sandbox with seeded fictional data. It demonstrates both roles without requiring a paid API or database service.
+
+| Portal | Email | Password | What it demonstrates |
+|---|---|---|---|
+| Provider | `demo@clinly.app` | `ClinlyDemo2026!` | People, business profile, services, plans, progress, messaging, integrations, and audit history |
+| Patient | `patient@clinly.app` | `ClinlyDemo2026!` | Patient home, assigned plans, encrypted-style check-ins, progress history, and private provider messaging |
+
+Demo changes stay inside the visitor's browser tab and reset on refresh. The hosted sandbox contains no real personal or health data and does not connect to the production FastAPI/MongoDB stack.
+
+### Provider portal
+
+![Clinly provider dashboard](docs/screenshots/clinly-provider-overview.jpg)
+
+### Patient portal
+
+![Clinly patient dashboard](docs/screenshots/clinly-patient-dashboard.jpg)
+
+**Public product status: BETA · Current backend line: 1.0.x**
 
 Clinly combines secure messaging with encrypted journaling and progress tracking for ongoing professional relationships. A participant can use the same private portal for care, fitness coaching, laser hair-removal progress, or a general relationship track without creating separate products for each use case.
 
@@ -13,6 +36,7 @@ Clinly combines secure messaging with encrypted journaling and progress tracking
 ### Relationship portal
 
 - Professional and participant sign-in
+- Dedicated provider workspace and patient portal navigation
 - Professional-created participant accounts
 - Participant roster scoped to the owning professional
 - Care, Fitness, Laser Hair Removal, and General relationship tracks

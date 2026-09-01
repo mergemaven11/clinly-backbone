@@ -11,6 +11,7 @@ import {
   readSessionToken,
 } from './brand'
 import BusinessWorkspace from './BusinessWorkspace'
+import { IS_DEMO_MODE } from './demoApi'
 import IntegrationsWorkspace from './IntegrationsWorkspace'
 import MessagesWorkspace from './MessagesWorkspace'
 import Overview from './Overview'
@@ -30,6 +31,15 @@ const NAV_ITEMS = [
 ]
 
 const PROVIDER_ONLY_VIEWS = new Set(['business', 'clients', 'integrations', 'audit'])
+
+function navLabel(key, defaultLabel, isProvider) {
+  if (isProvider) return defaultLabel
+  return {
+    home: 'Patient home',
+    portal: 'My plans & progress',
+    messages: 'My messages',
+  }[key] || defaultLabel
+}
 
 function viewTitle(view) {
   return {
@@ -285,18 +295,19 @@ function PlatformWorkspace({ token, user, onLogout }) {
         <div className="brand-lockup sidebar-brand">
           <div className="brand-mark">{APP_INITIAL}</div>
           <span>{APP_NAME}</span>
+          <span className="beta-badge">BETA</span>
         </div>
         <span className="sidebar-label">Workspace</span>
         <nav>
           {visibleNav.map(([key, label, icon]) => (
             <button key={key} className={view === key ? 'nav-button active' : 'nav-button'} type="button" onClick={() => setView(key)}>
-              <span className="nav-icon" aria-hidden="true">{icon}</span><span>{label}</span>
+              <span className="nav-icon" aria-hidden="true">{icon}</span><span>{navLabel(key, label, isProvider)}</span>
             </button>
           ))}
         </nav>
         <div className="sidebar-user">
           <span className="avatar">{user.email.slice(0, 1).toUpperCase()}</span>
-          <div><strong>{isProvider ? 'Provider' : 'Member'}</strong><span>{user.email}</span></div>
+          <div><strong>{isProvider ? 'Provider' : 'Patient'}</strong><span>{user.email}</span></div>
         </div>
         <button className="secondary-button full" type="button" onClick={onLogout}>Sign out</button>
       </aside>
@@ -304,11 +315,19 @@ function PlatformWorkspace({ token, user, onLogout }) {
       <main className="main-content">
         <header className="topbar">
           <div>
-            <span className="kicker">{isProvider ? 'Provider workspace' : 'My workspace'}</span>
+            <span className="kicker">{isProvider ? 'Provider workspace' : 'Patient portal'}</span>
             <h1>{viewTitle(view)}</h1>
           </div>
-          <div className="privacy-chip"><span />Protected workspace data</div>
+          <div className={IS_DEMO_MODE ? 'privacy-chip demo-chip' : 'privacy-chip'}><span />{IS_DEMO_MODE ? 'Seeded demo data' : isProvider ? 'Protected workspace data' : 'Private patient workspace'}</div>
         </header>
+
+        {IS_DEMO_MODE && (
+          <div className="demo-banner">
+            <strong>Demo environment</strong>
+            <span>Explore freely—changes are local to this tab and no real personal data is used.</span>
+            <a href="https://github.com/mergemaven11/clinly-backbone" target="_blank" rel="noreferrer">View source</a>
+          </div>
+        )}
 
         {notice && <div className="notice success">{notice}</div>}
         {error && <div className="notice error dismissible">{error}<button type="button" onClick={() => setError('')}>×</button></div>}
