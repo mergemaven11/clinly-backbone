@@ -1,6 +1,6 @@
-/* Provider > Business layout
- * Keep the page feeling like a dashboard while making every form row safe
- * inside the real workspace width beside Clinly's persistent sidebar.
+/* Provider > Business layout v4
+ * Identity and Catalog are separate top-level rows so they can never overlap.
+ * Internal form grids stay compact and responsive inside each section.
  */
 
 .business-page,
@@ -22,42 +22,53 @@
   width: 100%;
   max-width: 1480px;
   margin-inline: auto;
+  overflow-x: clip;
 }
 
-/* Restore the useful dashboard composition: profile left, services right. */
+/* Top-level architecture: Identity first, Catalog second. Never side-by-side. */
 .business-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.18fr) minmax(360px, 0.82fr) !important;
-  gap: 1.15rem;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 1.25rem;
   align-items: start;
 }
 
 .business-profile,
 .service-editor,
 .service-card {
+  position: relative;
+  isolation: isolate;
   overflow: hidden;
 }
 
+/* Keep Identity substantial without stretching across an ultrawide workspace. */
 .business-profile {
+  width: min(100%, 1080px);
+  justify-self: center;
+}
+
+/* Catalog is its own row: editor on the left, saved services on the right. */
+.business-services {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.72fr) minmax(0, 1.28fr);
+  gap: 1rem;
+  align-items: start;
   width: 100%;
 }
 
-.business-services {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.9rem;
-  align-items: start;
+.service-editor,
+.service-list {
+  width: 100%;
 }
 
 .service-list {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.8rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
   align-content: start;
 }
 
-/* Keep ordinary paired fields compact, but never allow a child to force
-   the card wider than its grid track. */
+/* Paired fields remain compact while every child is constrained to its card. */
 .business-page .form-grid.two {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -65,13 +76,13 @@
 .business-page input,
 .business-page select,
 .business-page textarea,
-.business-page label {
+.business-page label,
+.business-page button {
   min-width: 0;
   max-width: 100%;
 }
 
-/* Repeater items are mini-cards. They no longer try to squeeze 5–6 controls
-   into one horizontal row. */
+/* Locations and credentials are self-contained mini-cards. */
 .business-repeater {
   gap: 0.7rem;
 }
@@ -79,7 +90,7 @@
 .business-repeater-row,
 .business-repeater-row.credential-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(150px, 0.7fr) !important;
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 0.72fr) !important;
   gap: 0.55rem 0.65rem;
   align-items: center;
   padding: 0.72rem;
@@ -88,14 +99,14 @@
   background: rgba(255, 255, 255, 0.82);
 }
 
-/* Location row: label + type / address / visibility + remove */
+/* Location: name + type / address / public + remove */
 .business-repeater-row:not(.credential-row) > :nth-child(1) { grid-column: 1; }
 .business-repeater-row:not(.credential-row) > :nth-child(2) { grid-column: 2; }
 .business-repeater-row:not(.credential-row) > :nth-child(3) { grid-column: 1 / -1; }
 .business-repeater-row:not(.credential-row) > .business-check { grid-column: 1; }
 .business-repeater-row:not(.credential-row) > .text-button { grid-column: 2; justify-self: end; }
 
-/* Credential row: name + issuer / reference + expiry / visibility + remove */
+/* Credential: name + issuer / reference + expiry / public + remove */
 .business-repeater-row.credential-row > :nth-child(1) { grid-column: 1; }
 .business-repeater-row.credential-row > :nth-child(2) { grid-column: 2; }
 .business-repeater-row.credential-row > :nth-child(3) { grid-column: 1; }
@@ -103,10 +114,7 @@
 .business-repeater-row.credential-row > .business-check { grid-column: 1; }
 .business-repeater-row.credential-row > .text-button { grid-column: 2; justify-self: end; }
 
-.business-repeater-row > input,
-.business-repeater-row > select,
-.business-repeater-row > label,
-.business-repeater-row > button {
+.business-repeater-row > * {
   min-width: 0;
   max-width: 100%;
 }
@@ -116,9 +124,8 @@
   white-space: normal;
 }
 
-/* Publishing stays compact instead of becoming another giant row. */
 .business-publish-box {
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.72fr);
+  grid-template-columns: minmax(0, 1fr) minmax(230px, 0.72fr);
   align-items: stretch;
 }
 
@@ -126,7 +133,7 @@
   height: 100%;
 }
 
-/* Service cards read like catalog cards rather than compressed spreadsheets. */
+/* Service cards are catalog cards, not spreadsheet rows. */
 .service-card {
   padding: 1rem 1.05rem;
 }
@@ -156,26 +163,36 @@
   border-top: 1px solid rgba(148, 163, 184, 0.13);
 }
 
-/* When the actual Business workspace gets tight, stack the two primary cards.
-   This is based on the content container, not the browser window. */
-@container (max-width: 1120px) {
-  .business-layout {
-    grid-template-columns: minmax(0, 1fr) !important;
+/* Catalog editor + saved services stack when the actual content area narrows. */
+@container (max-width: 1180px) {
+  .business-services {
+    grid-template-columns: minmax(340px, 0.8fr) minmax(0, 1.2fr);
   }
 
-  .business-services {
-    grid-template-columns: minmax(340px, 0.78fr) minmax(0, 1.22fr);
-    gap: 1rem;
-  }
-}
-
-@container (max-width: 860px) {
-  .business-services {
+  .service-list {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
-@container (max-width: 700px) {
+@container (max-width: 900px) {
+  .business-profile {
+    width: 100%;
+  }
+
+  .business-services {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .service-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (max-width: 760px) {
+  .service-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .business-page .form-grid.two,
   .business-repeater-row,
   .business-repeater-row.credential-row,
