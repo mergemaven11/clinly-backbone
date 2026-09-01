@@ -1,0 +1,102 @@
+.business-page {
+  container-type: inline-size;
+}
+
+.business-layout > *,
+.business-profile,
+.business-services,
+.business-repeater,
+.business-repeater-row,
+.business-publish-box,
+.service-card,
+.service-facts,
+.form-grid,
+.form-grid > label {
+  min-width: 0;
+}
+
+.business-profile input,
+.business-profile select,
+.business-profile textarea,
+.service-editor input,
+.service-editor select,
+.service-editor textarea,
+.business-repeater-row > input,
+.business-repeater-row > select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.business-repeater-row > *,
+.business-publish-box > *,
+.service-facts > * {
+  min-width: 0;
+}
+
+.business-switch > span,
+.business-switch small,
+.service-card h3,
+.service-card p {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * The provider workspace sits inside the authenticated app shell, so the
+ * usable content area can be much narrower than the browser viewport.
+ * Container queries make this section respond to the space it actually has.
+ */
+@container (max-width: 1180px) {
+  .business-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container (max-width: 820px) {
+  .business-repeater-row,
+  .business-repeater-row.credential-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .business-publish-box {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .business-toggle-grid,
+  .service-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (max-width: 560px) {
+  .form-grid.two,
+  .business-repeater-row,
+  .business-repeater-row.credential-row,
+  .business-toggle-grid,
+  .service-facts,
+  .business-publish-box {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .business-repeater-heading,
+  .service-card-top,
+  .service-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .business-repeater-heading .small-button,
+  .service-actions button {
+    width: 100%;
+  }
+}
+
+/* Fallback for browsers without container-query support. */
+@supports not (container-type: inline-size) {
+  @media (max-width: 1320px) {
+    .business-layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}
