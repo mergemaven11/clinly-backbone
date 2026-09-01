@@ -1,0 +1,122 @@
+/*
+ * Provider > Business layout v2
+ *
+ * The provider shell has a persistent sidebar, so the usable workspace can be
+ * much narrower than the browser viewport. Keep the profile full-width and
+ * give service management its own row instead of squeezing both together.
+ */
+
+.business-page,
+.business-layout,
+.business-layout > *,
+.business-profile,
+.business-services,
+.service-editor,
+.service-list,
+.service-card,
+.business-repeater,
+.business-repeater-row {
+  min-width: 0;
+}
+
+/* The profile is intentionally full width. This removes the form/card
+   collision seen at desktop widths with the Clinly sidebar present. */
+.business-layout {
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 1.1rem;
+}
+
+.business-profile {
+  width: 100%;
+}
+
+/* Service creation and the existing catalog become a separate workspace. */
+.business-services {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.8fr) minmax(0, 1.2fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.service-list {
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+}
+
+/* Long location/credential rows should never try to render as five or six
+   tiny columns inside the profile card. */
+.business-repeater-row,
+.business-repeater-row.credential-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 0.65rem;
+}
+
+.business-repeater-row > input,
+.business-repeater-row > select,
+.business-repeater-row > label,
+.business-repeater-row > button {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.business-repeater-row > .business-check {
+  justify-self: start;
+  white-space: normal;
+}
+
+.business-repeater-row > .text-button {
+  grid-column: 2;
+  justify-self: end;
+}
+
+/* Service cards stay readable instead of compressing four facts into one row. */
+.service-facts {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.service-card-top {
+  align-items: flex-start;
+}
+
+.service-card h3,
+.service-card > p,
+.service-facts strong,
+.service-facts small {
+  overflow-wrap: anywhere;
+}
+
+/* The business page already establishes an inline-size container in
+   business.css. React to that actual workspace width rather than viewport. */
+@container (max-width: 1050px) {
+  .business-services {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container (max-width: 760px) {
+  .business-repeater-row,
+  .business-repeater-row.credential-row,
+  .business-publish-box,
+  .business-toggle-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .business-repeater-row > .text-button {
+    grid-column: 1;
+    justify-self: start;
+  }
+}
+
+@container (max-width: 560px) {
+  .business-hero-stats,
+  .service-facts {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .business-repeater-heading,
+  .business-page .section-heading,
+  .service-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
