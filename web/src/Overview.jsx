@@ -25,18 +25,18 @@ export default function Overview({ user, people, tracks, conversations, onOpenTr
         ['Conversations', conversations.length, 'Connected message threads'],
       ]
     : [
-        ['My tracks', tracks.length, 'Your active progress spaces'],
-        ['Conversations', conversations.length, 'Your message threads'],
-        ['Privacy', 'On', 'Sensitive track payloads are encrypted'],
+        ['My plans', tracks.length, 'Care and progress spaces shared with you'],
+        ['Messages', conversations.length, 'Private provider conversations'],
+        ['Privacy', 'On', 'Only your relationship data is available here'],
       ]
 
   return (
     <div className="page-stack">
       <section className="hero-card">
         <div>
-          <span className="kicker">{isProvider ? 'Relationship-centered business workspace' : 'Your progress, in context'}</span>
-          <h2>{isProvider ? 'Keep the person, the progress, and the conversation together.' : 'One place to track progress and stay connected.'}</h2>
-          <p>{isProvider ? `${APP_NAME} is built around flexible provider relationships instead of forcing every business into the same workflow.` : 'Your information stays inside the relationship spaces you belong to.'}</p>
+          <span className="kicker">{isProvider ? 'Relationship-centered business workspace' : 'Private patient portal'}</span>
+          <h2>{isProvider ? 'Keep the person, the progress, and the conversation together.' : 'Your plans, check-ins, and care conversation—all in one place.'}</h2>
+          <p>{isProvider ? `${APP_NAME} is built around flexible provider relationships instead of forcing every business into the same workflow.` : 'Review what your provider shared, record how things are going, and stay connected between appointments or sessions.'}</p>
           {isProvider && (
             <div className="hero-actions">
               <button className="primary-button" type="button" onClick={onOpenIntegrations}>Explore integrations</button>
@@ -58,7 +58,7 @@ export default function Overview({ user, people, tracks, conversations, onOpenTr
 
       <section className="section-card">
         <div className="section-heading">
-          <div><span className="kicker">Recent spaces</span><h3>Relationship tracks</h3></div>
+          <div><span className="kicker">{isProvider ? 'Recent spaces' : 'Shared with me'}</span><h3>{isProvider ? 'Relationship tracks' : 'My plans & progress'}</h3></div>
         </div>
         {tracks.length ? (
           <div className="track-grid">
