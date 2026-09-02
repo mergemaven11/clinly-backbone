@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 import json
@@ -28,6 +29,14 @@ router = APIRouter(tags=["portal"])
 
 
 def _serialize_user(user: dict[str, Any]) -> UserResponse:
+    """Handle serialize user.
+
+    Args:
+        user: Function argument.
+
+    Returns:
+        Function result.
+    """
     therapist_id = user.get("therapist_id")
     return UserResponse(
         id=str(user["_id"]),
@@ -43,6 +52,15 @@ def _serialize_track(
     *,
     cipher: MessageCipher,
 ) -> PortalTrackResponse:
+    """Handle serialize track.
+
+    Args:
+        track: Function argument.
+        cipher: Function argument.
+
+    Returns:
+        Function result.
+    """
     return PortalTrackResponse(
         id=str(track["_id"]),
         professional_user_id=str(track["professional_user_id"]),
@@ -58,6 +76,15 @@ def _serialize_entry(
     *,
     cipher: MessageCipher,
 ) -> PortalEntryResponse:
+    """Handle serialize entry.
+
+    Args:
+        entry: Function argument.
+        cipher: Function argument.
+
+    Returns:
+        Function result.
+    """
     payload = json.loads(cipher.decrypt(entry["ciphertext"]))
     return PortalEntryResponse(
         id=str(entry["_id"]),
@@ -83,6 +110,16 @@ def list_clients(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> list[UserResponse]:
+    """Handle list clients.
+
+    Args:
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     require_therapist(database, current_user=current_user, request=request)
     clients = list(
         database.users.find(
@@ -122,6 +159,17 @@ def create_track(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> PortalTrackResponse:
+    """Handle create track.
+
+    Args:
+        payload: Function argument.
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     client = authorize_subject_client_access(
         database,
         subject_user_id=payload.client_id,
@@ -167,6 +215,16 @@ def list_tracks(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> list[PortalTrackResponse]:
+    """Handle list tracks.
+
+    Args:
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     role = current_user.get("role")
     if role == UserRole.THERAPIST.value:
         query = {"professional_user_id": current_user["_id"]}
@@ -206,6 +264,17 @@ def create_entry(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> PortalEntryResponse:
+    """Handle create entry.
+
+    Args:
+        payload: Function argument.
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     track = authorize_track_access(
         database,
         track_id=payload.track_id,
@@ -260,6 +329,18 @@ def list_entries(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> list[PortalEntryResponse]:
+    """Handle list entries.
+
+    Args:
+        request: Function argument.
+        track_id: Function argument.
+        limit: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     track = authorize_track_access(
         database,
         track_id=track_id,

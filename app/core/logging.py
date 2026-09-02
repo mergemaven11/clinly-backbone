@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 import json
@@ -24,10 +25,23 @@ class JsonFormatter(logging.Formatter):
     """
 
     def __init__(self, *, app_env: str) -> None:
+        """Initialize the instance.
+
+        Args:
+            app_env: Function argument.
+        """
         super().__init__()
         self._app_env = app_env
 
     def format(self, record: logging.LogRecord) -> str:
+        """Handle format.
+
+        Args:
+            record: Function argument.
+
+        Returns:
+            Function result.
+        """
         payload: dict[str, Any] = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "level": record.levelname,

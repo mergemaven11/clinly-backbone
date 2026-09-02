@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -12,6 +13,11 @@ PASSWORD = "StrongPass123!"
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:
+    """Handle client.
+
+    Yields:
+        Values produced by the function.
+    """
     with TestClient(app) as test_client:
         database = app.state.mongo.db()
         for collection in ("users", "provider_profiles", "provider_services", "audit_events"):
@@ -22,6 +28,15 @@ def client() -> Iterator[TestClient]:
 
 
 def _login(client: TestClient, email: str) -> str:
+    """Handle login.
+
+    Args:
+        client: Function argument.
+        email: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post("/auth/login", json={"email": email, "password": PASSWORD})
     assert response.status_code == 200
     return response.json()["access_token"]
@@ -30,6 +45,11 @@ def _login(client: TestClient, email: str) -> str:
 def test_provider_sees_active_private_and_public_services_but_member_sees_public_only(
     client: TestClient,
 ) -> None:
+    """Verify provider sees active private and public services but member sees public only.
+
+    Args:
+        client: Function argument.
+    """
     signup = client.post(
         "/auth/signup-provider",
         json={"email": "provider@example.com", "password": PASSWORD},

@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
@@ -27,6 +28,14 @@ router = APIRouter(tags=["provider-business"])
 
 
 def _credential_document(value: dict[str, Any]) -> dict[str, Any]:
+    """Handle credential document.
+
+    Args:
+        value: Function argument.
+
+    Returns:
+        Function result.
+    """
     expires_on = value.get("expires_on")
     if isinstance(expires_on, date):
         value = {**value, "expires_on": expires_on.isoformat()}
@@ -34,6 +43,14 @@ def _credential_document(value: dict[str, Any]) -> dict[str, Any]:
 
 
 def _profile_write_document(payload: ProviderProfileUpsert) -> dict[str, Any]:
+    """Handle profile write document.
+
+    Args:
+        payload: Function argument.
+
+    Returns:
+        Function result.
+    """
     data = payload.model_dump()
     data["locations"] = [location.model_dump() for location in payload.locations]
     data["credentials"] = [
@@ -43,6 +60,14 @@ def _profile_write_document(payload: ProviderProfileUpsert) -> dict[str, Any]:
 
 
 def _serialize_profile(document: dict[str, Any]) -> ProviderProfileResponse:
+    """Handle serialize profile.
+
+    Args:
+        document: Function argument.
+
+    Returns:
+        Function result.
+    """
     return ProviderProfileResponse(
         provider_user_id=str(document["provider_user_id"]),
         display_name=document["display_name"],
@@ -64,6 +89,14 @@ def _serialize_profile(document: dict[str, Any]) -> ProviderProfileResponse:
 
 
 def _serialize_service(document: dict[str, Any]) -> ServiceResponse:
+    """Handle serialize service.
+
+    Args:
+        document: Function argument.
+
+    Returns:
+        Function result.
+    """
     return ServiceResponse(
         id=str(document["_id"]),
         provider_user_id=str(document["provider_user_id"]),
@@ -85,6 +118,14 @@ def _serialize_service(document: dict[str, Any]) -> ServiceResponse:
 
 
 def _serialize_public_service(document: dict[str, Any]) -> PublicServiceResponse:
+    """Handle serialize public service.
+
+    Args:
+        document: Function argument.
+
+    Returns:
+        Function result.
+    """
     return PublicServiceResponse(
         id=str(document["_id"]),
         name=document["name"],
@@ -105,6 +146,16 @@ def _owned_service_or_404(
     service_id: str,
     provider_user_id: ObjectId,
 ) -> dict[str, Any]:
+    """Handle owned service or 404.
+
+    Args:
+        database: Function argument.
+        service_id: Function argument.
+        provider_user_id: Function argument.
+
+    Returns:
+        Function result.
+    """
     if not ObjectId.is_valid(service_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found")
     document = database.provider_services.find_one(
@@ -129,6 +180,16 @@ def get_provider_profile(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> ProviderProfileResponse | None:
+    """Handle get provider profile.
+
+    Args:
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     require_provider(database, current_user=current_user, request=request)
     document = database.provider_profiles.find_one(
         {"provider_user_id": current_user["_id"]}
@@ -153,6 +214,17 @@ def upsert_provider_profile(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> ProviderProfileResponse:
+    """Handle upsert provider profile.
+
+    Args:
+        payload: Function argument.
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     require_provider(database, current_user=current_user, request=request)
     now = datetime.now(timezone.utc)
     values = _profile_write_document(payload)
@@ -212,6 +284,16 @@ def list_provider_services(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> list[ServiceResponse]:
+    """Handle list provider services.
+
+    Args:
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     require_provider(database, current_user=current_user, request=request)
     documents = database.provider_services.find(
         {
@@ -239,6 +321,17 @@ def create_provider_service(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> ServiceResponse:
+    """Handle create provider service.
+
+    Args:
+        payload: Function argument.
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     require_provider(database, current_user=current_user, request=request)
     now = datetime.now(timezone.utc)
     document: dict[str, Any] = {
@@ -279,6 +372,18 @@ def update_provider_service(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> ServiceResponse:
+    """Handle update provider service.
+
+    Args:
+        service_id: Function argument.
+        payload: Function argument.
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     require_provider(database, current_user=current_user, request=request)
     current = _owned_service_or_404(
         database,
@@ -324,6 +429,17 @@ def archive_provider_service(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> ServiceResponse:
+    """Handle archive provider service.
+
+    Args:
+        service_id: Function argument.
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     require_provider(database, current_user=current_user, request=request)
     current = _owned_service_or_404(
         database,
@@ -360,6 +476,15 @@ def public_provider_page(
     slug: str,
     database: Database = Depends(get_database),
 ) -> PublicProviderPage:
+    """Handle public provider page.
+
+    Args:
+        slug: Function argument.
+        database: Function argument.
+
+    Returns:
+        Function result.
+    """
     profile = database.provider_profiles.find_one(
         {"public_slug": slug.lower(), "is_public": True}
     )

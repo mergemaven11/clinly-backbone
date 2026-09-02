@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -13,6 +14,14 @@ BCRYPT_MAX_PASSWORD_BYTES = 72
 
 
 def _password_bytes(password: str) -> bytes:
+    """Handle password bytes.
+
+    Args:
+        password: Function argument.
+
+    Returns:
+        Function result.
+    """
     encoded = password.encode("utf-8")
     if len(encoded) > BCRYPT_MAX_PASSWORD_BYTES:
         raise ValueError("password exceeds bcrypt's 72-byte limit")
@@ -46,6 +55,17 @@ def create_access_token(
     secret: str,
     expires_minutes: int,
 ) -> str:
+    """Handle create access token.
+
+    Args:
+        subject: Function argument.
+        role: Function argument.
+        secret: Function argument.
+        expires_minutes: Function argument.
+
+    Returns:
+        Function result.
+    """
     now = datetime.now(timezone.utc)
     payload: dict[str, Any] = {
         "sub": subject,

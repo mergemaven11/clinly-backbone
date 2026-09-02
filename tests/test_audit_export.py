@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 import csv
@@ -15,6 +16,11 @@ PASSWORD = "StrongPass123!"
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:
+    """Handle client.
+
+    Yields:
+        Values produced by the function.
+    """
     with TestClient(app) as test_client:
         database = app.state.mongo.db()
         for collection in ("users", "conversations", "messages", "audit_events"):
@@ -25,6 +31,15 @@ def client() -> Iterator[TestClient]:
 
 
 def _signup(client: TestClient, email: str) -> dict:
+    """Handle signup.
+
+    Args:
+        client: Function argument.
+        email: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/auth/signup-therapist",
         json={"email": email, "password": PASSWORD},
@@ -34,6 +49,15 @@ def _signup(client: TestClient, email: str) -> dict:
 
 
 def _login(client: TestClient, email: str) -> str:
+    """Handle login.
+
+    Args:
+        client: Function argument.
+        email: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/auth/login",
         json={"email": email, "password": PASSWORD},
@@ -43,6 +67,16 @@ def _login(client: TestClient, email: str) -> str:
 
 
 def _create_client(client: TestClient, therapist_token: str, email: str) -> dict:
+    """Handle create client.
+
+    Args:
+        client: Function argument.
+        therapist_token: Function argument.
+        email: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/auth/create-client",
         headers={"Authorization": f"Bearer {therapist_token}"},
@@ -59,6 +93,14 @@ def _insert_event(
     action: str,
     user_agent: str = "pytest",
 ) -> None:
+    """Handle insert event.
+
+    Args:
+        subject_user_id: Function argument.
+        timestamp: Function argument.
+        action: Function argument.
+        user_agent: Function argument.
+    """
     app.state.mongo.db().audit_events.insert_one(
         {
             "timestamp": timestamp,
@@ -76,6 +118,11 @@ def _insert_event(
 
 
 def test_audit_query_is_scoped_and_date_filtered(client: TestClient) -> None:
+    """Verify audit query is scoped and date filtered.
+
+    Args:
+        client: Function argument.
+    """
     _signup(client, "therapist@example.com")
     therapist_token = _login(client, "therapist@example.com")
     owned_client = _create_client(client, therapist_token, "client@example.com")
@@ -115,6 +162,11 @@ def test_audit_query_is_scoped_and_date_filtered(client: TestClient) -> None:
 def test_foreign_therapist_cannot_query_or_export_client_audit(
     client: TestClient,
 ) -> None:
+    """Verify foreign therapist cannot query or export client audit.
+
+    Args:
+        client: Function argument.
+    """
     _signup(client, "owner@example.com")
     owner_token = _login(client, "owner@example.com")
     owned_client = _create_client(client, owner_token, "client@example.com")
@@ -138,6 +190,11 @@ def test_foreign_therapist_cannot_query_or_export_client_audit(
 
 
 def test_client_cannot_query_or_export_audit(client: TestClient) -> None:
+    """Verify client cannot query or export audit.
+
+    Args:
+        client: Function argument.
+    """
     _signup(client, "therapist@example.com")
     therapist_token = _login(client, "therapist@example.com")
     owned_client = _create_client(client, therapist_token, "client@example.com")
@@ -159,6 +216,11 @@ def test_client_cannot_query_or_export_audit(client: TestClient) -> None:
 
 
 def test_csv_export_filters_rows_and_escapes_formula_cells(client: TestClient) -> None:
+    """Verify csv export filters rows and escapes formula cells.
+
+    Args:
+        client: Function argument.
+    """
     _signup(client, "therapist@example.com")
     therapist_token = _login(client, "therapist@example.com")
     owned_client = _create_client(client, therapist_token, "client@example.com")
@@ -197,6 +259,11 @@ def test_csv_export_filters_rows_and_escapes_formula_cells(client: TestClient) -
 
 
 def test_invalid_date_range_is_rejected(client: TestClient) -> None:
+    """Verify invalid date range is rejected.
+
+    Args:
+        client: Function argument.
+    """
     _signup(client, "therapist@example.com")
     therapist_token = _login(client, "therapist@example.com")
     owned_client = _create_client(client, therapist_token, "client@example.com")

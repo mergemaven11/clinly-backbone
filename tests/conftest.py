@@ -1,9 +1,18 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 import os
 
 
 def _escape_workflow_command(value: str) -> str:
+    """Handle escape workflow command.
+
+    Args:
+        value: Function argument.
+
+    Returns:
+        Function result.
+    """
     return (
         value.replace("%", "%25")
         .replace("\r", "%0D")

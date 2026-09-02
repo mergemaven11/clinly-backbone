@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from datetime import date, datetime, time
@@ -9,11 +10,13 @@ from app.models.provider_business import DeliveryMode
 
 
 class AvailabilityExceptionKind(StrEnum):
+    """Represent AvailabilityExceptionKind."""
     AVAILABLE = "AVAILABLE"
     UNAVAILABLE = "UNAVAILABLE"
 
 
 class BookingStatus(StrEnum):
+    """Represent BookingStatus."""
     CONFIRMED = "CONFIRMED"
     CANCELLED = "CANCELLED"
     COMPLETED = "COMPLETED"
@@ -21,6 +24,7 @@ class BookingStatus(StrEnum):
 
 
 class SchedulePolicy(BaseModel):
+    """Represent SchedulePolicy."""
     slot_interval_minutes: int = Field(default=15, ge=5, le=120)
     minimum_notice_minutes: int = Field(default=120, ge=0, le=43_200)
     booking_horizon_days: int = Field(default=60, ge=1, le=365)
@@ -32,6 +36,7 @@ class SchedulePolicy(BaseModel):
 
 
 class AvailabilityRule(BaseModel):
+    """Represent AvailabilityRule."""
     weekday: int = Field(ge=0, le=6)
     start_local: time
     end_local: time
@@ -39,6 +44,11 @@ class AvailabilityRule(BaseModel):
 
     @model_validator(mode="after")
     def validate_window(self) -> AvailabilityRule:
+        """Handle validate window.
+
+        Returns:
+            Function result.
+        """
         if self.end_local <= self.start_local:
             raise ValueError("end_local must be later than start_local")
         return self
@@ -46,6 +56,14 @@ class AvailabilityRule(BaseModel):
     @field_validator("service_ids")
     @classmethod
     def normalize_service_ids(cls, values: list[str]) -> list[str]:
+        """Handle normalize service ids.
+
+        Args:
+            values: Function argument.
+
+        Returns:
+            Function result.
+        """
         normalized: list[str] = []
         seen: set[str] = set()
         for raw in values:
@@ -58,6 +76,7 @@ class AvailabilityRule(BaseModel):
 
 
 class AvailabilityException(BaseModel):
+    """Represent AvailabilityException."""
     date_local: date
     kind: AvailabilityExceptionKind
     start_local: time | None = None
@@ -66,6 +85,11 @@ class AvailabilityException(BaseModel):
 
     @model_validator(mode="after")
     def validate_window(self) -> AvailabilityException:
+        """Handle validate window.
+
+        Returns:
+            Function result.
+        """
         has_start = self.start_local is not None
         has_end = self.end_local is not None
         if has_start != has_end:
@@ -79,6 +103,14 @@ class AvailabilityException(BaseModel):
     @field_validator("service_ids")
     @classmethod
     def normalize_service_ids(cls, values: list[str]) -> list[str]:
+        """Handle normalize service ids.
+
+        Args:
+            values: Function argument.
+
+        Returns:
+            Function result.
+        """
         normalized: list[str] = []
         seen: set[str] = set()
         for raw in values:
@@ -91,12 +123,14 @@ class AvailabilityException(BaseModel):
 
 
 class ProviderScheduleUpsert(BaseModel):
+    """Represent ProviderScheduleUpsert."""
     policy: SchedulePolicy = Field(default_factory=SchedulePolicy)
     weekly_rules: list[AvailabilityRule] = Field(default_factory=list, max_length=100)
     exceptions: list[AvailabilityException] = Field(default_factory=list, max_length=366)
 
 
 class ProviderScheduleResponse(ProviderScheduleUpsert):
+    """Represent ProviderScheduleResponse."""
     provider_user_id: str
     timezone: str
     created_at: datetime
@@ -104,6 +138,7 @@ class ProviderScheduleResponse(ProviderScheduleUpsert):
 
 
 class BookableServiceResponse(BaseModel):
+    """Represent BookableServiceResponse."""
     id: str
     name: str
     description: str | None = None
@@ -119,6 +154,7 @@ class BookableServiceResponse(BaseModel):
 
 
 class AvailabilitySlot(BaseModel):
+    """Represent AvailabilitySlot."""
     starts_at: datetime
     ends_at: datetime
     provider_timezone: str
@@ -126,6 +162,7 @@ class AvailabilitySlot(BaseModel):
 
 
 class AvailabilityResponse(BaseModel):
+    """Represent AvailabilityResponse."""
     service_id: str
     provider_user_id: str
     provider_timezone: str
@@ -135,6 +172,7 @@ class AvailabilityResponse(BaseModel):
 
 
 class BookingCreate(BaseModel):
+    """Represent BookingCreate."""
     service_id: str = Field(min_length=1, max_length=64)
     starts_at: datetime
     participant_id: str | None = Field(default=None, min_length=1, max_length=64)
@@ -142,33 +180,57 @@ class BookingCreate(BaseModel):
     @field_validator("starts_at")
     @classmethod
     def require_timezone(cls, value: datetime) -> datetime:
+        """Handle require timezone.
+
+        Args:
+            value: Function argument.
+
+        Returns:
+            Function result.
+        """
         if value.tzinfo is None or value.utcoffset() is None:
             raise ValueError("starts_at must include a timezone offset")
         return value
 
 
 class BookingReschedule(BaseModel):
+    """Represent BookingReschedule."""
     starts_at: datetime
 
     @field_validator("starts_at")
     @classmethod
     def require_timezone(cls, value: datetime) -> datetime:
+        """Handle require timezone.
+
+        Args:
+            value: Function argument.
+
+        Returns:
+            Function result.
+        """
         if value.tzinfo is None or value.utcoffset() is None:
             raise ValueError("starts_at must include a timezone offset")
         return value
 
 
 class BookingStatusUpdate(BaseModel):
+    """Represent BookingStatusUpdate."""
     status: BookingStatus
 
     @model_validator(mode="after")
     def provider_transition_only(self) -> BookingStatusUpdate:
+        """Handle provider transition only.
+
+        Returns:
+            Function result.
+        """
         if self.status not in {BookingStatus.COMPLETED, BookingStatus.NO_SHOW}:
             raise ValueError("status must be COMPLETED or NO_SHOW")
         return self
 
 
 class BookingResponse(BaseModel):
+    """Represent BookingResponse."""
     id: str
     provider_user_id: str
     participant_user_id: str

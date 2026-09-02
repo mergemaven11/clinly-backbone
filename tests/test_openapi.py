@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from app.main import app
@@ -62,6 +63,7 @@ PROTECTED_OPERATIONS = EXPECTED_OPERATIONS - PUBLIC_OPERATIONS
 
 
 def test_openapi_contains_complete_platform_contract() -> None:
+    """Verify openapi contains complete platform contract."""
     schema = app.openapi()
 
     assert schema["info"]["version"] == "1.0.0"
@@ -90,17 +92,20 @@ def test_openapi_contains_complete_platform_contract() -> None:
 
 
 def test_readiness_documents_dependency_failure() -> None:
+    """Verify readiness documents dependency failure."""
     schema = app.openapi()
     assert "503" in schema["paths"]["/ready"]["get"]["responses"]
 
 
 def test_login_documents_auth_and_throttle_failures() -> None:
+    """Verify login documents auth and throttle failures."""
     schema = app.openapi()
     responses = schema["paths"]["/auth/login"]["post"]["responses"]
     assert {"401", "403", "422", "429"}.issubset(responses)
 
 
 def test_provider_integration_surface_is_documented_as_protected() -> None:
+    """Verify provider integration surface is documented as protected."""
     schema = app.openapi()
     for path in ("/integrations/catalog", "/integrations/connections"):
         operation = schema["paths"][path]["get"]
@@ -109,6 +114,7 @@ def test_provider_integration_surface_is_documented_as_protected() -> None:
 
 
 def test_public_provider_surfaces_do_not_require_bearer_auth() -> None:
+    """Verify public provider surfaces do not require bearer auth."""
     schema = app.openapi()
     provider = schema["paths"]["/public/providers/{slug}"]["get"]
     slots = schema["paths"][

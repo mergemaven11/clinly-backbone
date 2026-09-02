@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 import io
@@ -22,6 +23,11 @@ PASSWORD = "StrongPass123!"
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:
+    """Handle client.
+
+    Yields:
+        Values produced by the function.
+    """
     with TestClient(app) as test_client:
         database = app.state.mongo.db()
         for collection in ("users", "conversations", "messages", "audit_events"):
@@ -32,6 +38,15 @@ def client() -> Iterator[TestClient]:
 
 
 def _signup(client: TestClient, email: str = "therapist@example.com") -> dict:
+    """Handle signup.
+
+    Args:
+        client: Function argument.
+        email: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/auth/signup-therapist",
         json={"email": email, "password": PASSWORD},
@@ -41,6 +56,15 @@ def _signup(client: TestClient, email: str = "therapist@example.com") -> dict:
 
 
 def _login(client: TestClient, email: str = "therapist@example.com") -> str:
+    """Handle login.
+
+    Args:
+        client: Function argument.
+        email: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/auth/login",
         json={"email": email, "password": PASSWORD},
@@ -50,6 +74,14 @@ def _login(client: TestClient, email: str = "therapist@example.com") -> str:
 
 
 def _prod_settings(**overrides) -> Settings:
+    """Handle prod settings.
+
+    Args:
+        overrides: Function argument.
+
+    Returns:
+        Function result.
+    """
     values = {
         "APP_ENV": "prod",
         "LOG_LEVEL": "INFO",
@@ -63,6 +95,7 @@ def _prod_settings(**overrides) -> Settings:
 
 
 def test_production_rejects_debug_and_unsafe_cors() -> None:
+    """Verify production rejects debug and unsafe cors."""
     with pytest.raises(ValidationError):
         _prod_settings(LOG_LEVEL="DEBUG")
     with pytest.raises(ValidationError):
@@ -72,6 +105,7 @@ def test_production_rejects_debug_and_unsafe_cors() -> None:
 
 
 def test_production_rejects_example_secrets() -> None:
+    """Verify production rejects example secrets."""
     with pytest.raises(ValidationError):
         _prod_settings(JWT_SECRET="change-me-" + "x" * 40)
     with pytest.raises(ValidationError):
@@ -79,11 +113,17 @@ def test_production_rejects_example_secrets() -> None:
 
 
 def test_cors_is_disabled_by_default() -> None:
+    """Verify cors is disabled by default."""
     assert get_settings().cors_allowed_origins == []
     assert all(middleware.cls is not CORSMiddleware for middleware in app.user_middleware)
 
 
 def test_login_is_rate_limited_and_rate_limit_is_audited(client: TestClient) -> None:
+    """Verify login is rate limited and rate limit is audited.
+
+    Args:
+        client: Function argument.
+    """
     _signup(client)
     for _ in range(get_settings().login_rate_limit_max_attempts):
         response = client.post(
@@ -107,6 +147,11 @@ def test_login_is_rate_limited_and_rate_limit_is_audited(client: TestClient) -> 
 
 
 def test_expired_and_forged_jwts_are_rejected(client: TestClient) -> None:
+    """Verify expired and forged jwts are rejected.
+
+    Args:
+        client: Function argument.
+    """
     settings = get_settings()
     secret = settings.jwt_secret.get_secret_value()
     expired = jwt.encode(
@@ -137,11 +182,21 @@ def test_expired_and_forged_jwts_are_rejected(client: TestClient) -> None:
 
 
 def test_missing_login_parameters_return_validation_error(client: TestClient) -> None:
+    """Verify missing login parameters return validation error.
+
+    Args:
+        client: Function argument.
+    """
     response = client.post("/auth/login", json={})
     assert response.status_code == 422
 
 
 def test_valid_but_unknown_conversation_id_is_safely_denied(client: TestClient) -> None:
+    """Verify valid but unknown conversation id is safely denied.
+
+    Args:
+        client: Function argument.
+    """
     therapist = _signup(client)
     token = _login(client)
     guessed_id = str(ObjectId())
@@ -167,7 +222,14 @@ def test_ready_returns_503_when_mongo_ping_fails(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Verify ready returns 503 when mongo ping fails.
+
+    Args:
+        client: Function argument.
+        monkeypatch: Function argument.
+    """
     def fail_ping() -> bool:
+        """Handle fail ping."""
         raise RuntimeError("database unavailable")
 
     monkeypatch.setattr(app.state.mongo, "ping", fail_ping)
@@ -177,6 +239,11 @@ def test_ready_returns_503_when_mongo_ping_fails(
 
 
 def test_plaintext_message_never_appears_in_structured_logs(client: TestClient) -> None:
+    """Verify plaintext message never appears in structured logs.
+
+    Args:
+        client: Function argument.
+    """
     therapist = _signup(client)
     therapist_token = _login(client)
     created_client = client.post(

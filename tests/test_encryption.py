@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 import pytest
@@ -8,6 +9,7 @@ TEST_KEY = "fFauOTt3BH8g9ZW7qzMjYBlq4WqrbGzZkr0KQINCO3c="
 
 
 def test_message_cipher_round_trip() -> None:
+    """Verify message cipher round trip."""
     cipher = MessageCipher(TEST_KEY)
     plaintext = "Private clinical message"
 
@@ -19,11 +21,13 @@ def test_message_cipher_round_trip() -> None:
 
 
 def test_invalid_encryption_key_fails_fast() -> None:
+    """Verify invalid encryption key fails fast."""
     with pytest.raises(RuntimeError, match="MESSAGE_ENCRYPTION_KEY is invalid"):
         MessageCipher("not-a-fernet-key")
 
 
 def test_tampered_ciphertext_fails_closed() -> None:
+    """Verify tampered ciphertext fails closed."""
     cipher = MessageCipher(TEST_KEY)
     ciphertext = cipher.encrypt("private")
     tampered = ciphertext[:-2] + "AA"

@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from app.models.integrations import (
@@ -69,4 +70,9 @@ def list_integration_definitions() -> list[IntegrationDefinition]:
 
 
 def integration_keys() -> set[str]:
+    """Handle integration keys.
+
+    Returns:
+        Function result.
+    """
     return {definition.key for definition in INTEGRATION_CATALOG}

@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -12,6 +13,11 @@ PASSWORD = "StrongPass123!"
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:
+    """Handle client.
+
+    Yields:
+        Values produced by the function.
+    """
     with TestClient(app) as test_client:
         database = app.state.mongo.db()
         collections = (
@@ -28,6 +34,15 @@ def client() -> Iterator[TestClient]:
 
 
 def _signup_provider(client: TestClient, email: str) -> dict:
+    """Handle signup provider.
+
+    Args:
+        client: Function argument.
+        email: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/auth/signup-provider",
         json={"email": email, "password": PASSWORD},
@@ -37,6 +52,15 @@ def _signup_provider(client: TestClient, email: str) -> dict:
 
 
 def _login(client: TestClient, email: str) -> str:
+    """Handle login.
+
+    Args:
+        client: Function argument.
+        email: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/auth/login",
         json={"email": email, "password": PASSWORD},
@@ -46,12 +70,25 @@ def _login(client: TestClient, email: str) -> str:
 
 
 def _auth(token: str) -> dict[str, str]:
+    """Handle auth.
+
+    Args:
+        token: Function argument.
+
+    Returns:
+        Function result.
+    """
     return {"Authorization": f"Bearer {token}"}
 
 
 def test_provider_builds_public_business_profile_and_service_catalog(
     client: TestClient,
 ) -> None:
+    """Verify provider builds public business profile and service catalog.
+
+    Args:
+        client: Function argument.
+    """
     _signup_provider(client, "coach@example.com")
     token = _login(client, "coach@example.com")
 
@@ -170,6 +207,11 @@ def test_provider_builds_public_business_profile_and_service_catalog(
 def test_profile_requires_slug_when_published_and_slugs_are_unique(
     client: TestClient,
 ) -> None:
+    """Verify profile requires slug when published and slugs are unique.
+
+    Args:
+        client: Function argument.
+    """
     _signup_provider(client, "one@example.com")
     one_token = _login(client, "one@example.com")
 
@@ -208,6 +250,11 @@ def test_profile_requires_slug_when_published_and_slugs_are_unique(
 def test_services_are_provider_scoped_and_archived_instead_of_hard_deleted(
     client: TestClient,
 ) -> None:
+    """Verify services are provider scoped and archived instead of hard deleted.
+
+    Args:
+        client: Function argument.
+    """
     _signup_provider(client, "owner@example.com")
     owner_token = _login(client, "owner@example.com")
     service = client.post(
@@ -259,6 +306,11 @@ def test_services_are_provider_scoped_and_archived_instead_of_hard_deleted(
 
 
 def test_participant_cannot_manage_provider_business(client: TestClient) -> None:
+    """Verify participant cannot manage provider business.
+
+    Args:
+        client: Function argument.
+    """
     _signup_provider(client, "provider@example.com")
     provider_token = _login(client, "provider@example.com")
     participant = client.post(
@@ -287,6 +339,11 @@ def test_participant_cannot_manage_provider_business(client: TestClient) -> None
 
 
 def test_invalid_timezone_is_rejected(client: TestClient) -> None:
+    """Verify invalid timezone is rejected.
+
+    Args:
+        client: Function argument.
+    """
     _signup_provider(client, "provider@example.com")
     token = _login(client, "provider@example.com")
     response = client.put(

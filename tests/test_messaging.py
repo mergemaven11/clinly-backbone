@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -12,6 +13,11 @@ PASSWORD = "StrongPass123!"
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:
+    """Handle client.
+
+    Yields:
+        Values produced by the function.
+    """
     with TestClient(app) as test_client:
         database = app.state.mongo.db()
         for collection in ("users", "conversations", "messages", "audit_events"):
@@ -22,6 +28,15 @@ def client() -> Iterator[TestClient]:
 
 
 def _signup(client: TestClient, email: str) -> dict:
+    """Handle signup.
+
+    Args:
+        client: Function argument.
+        email: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/auth/signup-therapist",
         json={"email": email, "password": PASSWORD},
@@ -31,6 +46,15 @@ def _signup(client: TestClient, email: str) -> dict:
 
 
 def _login(client: TestClient, email: str) -> str:
+    """Handle login.
+
+    Args:
+        client: Function argument.
+        email: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/auth/login",
         json={"email": email, "password": PASSWORD},
@@ -45,6 +69,16 @@ def _create_client(
     therapist_token: str,
     email: str,
 ) -> dict:
+    """Handle create client.
+
+    Args:
+        client: Function argument.
+        therapist_token: Function argument.
+        email: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/auth/create-client",
         headers={"Authorization": f"Bearer {therapist_token}"},
@@ -60,6 +94,16 @@ def _create_conversation(
     therapist_token: str,
     client_id: str,
 ) -> dict:
+    """Handle create conversation.
+
+    Args:
+        client: Function argument.
+        therapist_token: Function argument.
+        client_id: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/conversations",
         headers={"Authorization": f"Bearer {therapist_token}"},
@@ -72,6 +116,11 @@ def _create_conversation(
 def test_conversation_pair_is_unique_and_visible_to_owned_client(
     client: TestClient,
 ) -> None:
+    """Verify conversation pair is unique and visible to owned client.
+
+    Args:
+        client: Function argument.
+    """
     _signup(client, "therapist@example.com")
     therapist_token = _login(client, "therapist@example.com")
     owned_client = _create_client(
@@ -104,6 +153,11 @@ def test_conversation_pair_is_unique_and_visible_to_owned_client(
 def test_therapist_cannot_create_conversation_with_foreign_client(
     client: TestClient,
 ) -> None:
+    """Verify therapist cannot create conversation with foreign client.
+
+    Args:
+        client: Function argument.
+    """
     _signup(client, "therapist-one@example.com")
     therapist_one_token = _login(client, "therapist-one@example.com")
     foreign_client = _create_client(
@@ -135,6 +189,11 @@ def test_therapist_cannot_create_conversation_with_foreign_client(
 def test_message_plaintext_never_persists_and_participants_can_read(
     client: TestClient,
 ) -> None:
+    """Verify message plaintext never persists and participants can read.
+
+    Args:
+        client: Function argument.
+    """
     therapist = _signup(client, "therapist@example.com")
     therapist_token = _login(client, "therapist@example.com")
     owned_client = _create_client(
@@ -182,6 +241,11 @@ def test_message_plaintext_never_persists_and_participants_can_read(
 
 
 def test_foreign_conversation_is_denied_before_decryption(client: TestClient) -> None:
+    """Verify foreign conversation is denied before decryption.
+
+    Args:
+        client: Function argument.
+    """
     _signup(client, "therapist-one@example.com")
     therapist_one_token = _login(client, "therapist-one@example.com")
     owned_client = _create_client(
@@ -213,7 +277,13 @@ def test_foreign_conversation_is_denied_before_decryption(client: TestClient) ->
     original_cipher = app.state.message_cipher
 
     class DecryptBomb:
+        """Represent DecryptBomb."""
         def decrypt(self, ciphertext: str) -> str:
+            """Handle decrypt.
+
+            Args:
+                ciphertext: Function argument.
+            """
             raise AssertionError("decryption must not run for unauthorized access")
 
     app.state.message_cipher = DecryptBomb()
@@ -240,6 +310,11 @@ def test_foreign_conversation_is_denied_before_decryption(client: TestClient) ->
 
 
 def test_malformed_conversation_id_uses_same_safe_denial(client: TestClient) -> None:
+    """Verify malformed conversation id uses same safe denial.
+
+    Args:
+        client: Function argument.
+    """
     therapist = _signup(client, "therapist@example.com")
     therapist_token = _login(client, "therapist@example.com")
 

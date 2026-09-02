@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 import base64
@@ -18,6 +19,11 @@ class MessageCipher:
     """
 
     def __init__(self, key: str) -> None:
+        """Initialize the instance.
+
+        Args:
+            key: Function argument.
+        """
         try:
             raw_key = base64.urlsafe_b64decode(key.encode("ascii"))
         except (AttributeError, UnicodeEncodeError, ValueError, binascii.Error) as exc:

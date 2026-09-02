@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
@@ -44,6 +45,15 @@ router = APIRouter(tags=["scheduling"])
 
 
 def _service_or_404(database: Database, service_id: str) -> dict[str, Any]:
+    """Handle service or 404.
+
+    Args:
+        database: Function argument.
+        service_id: Function argument.
+
+    Returns:
+        Function result.
+    """
     if not ObjectId.is_valid(service_id):
         raise HTTPException(status_code=404, detail="Service not found")
     service = database.provider_services.find_one(
@@ -60,6 +70,13 @@ def _authorize_service_access(
     service: dict[str, Any],
     current_user: dict[str, Any],
 ) -> None:
+    """Handle authorize service access.
+
+    Args:
+        database: Function argument.
+        service: Function argument.
+        current_user: Function argument.
+    """
     role = current_user.get("role")
     if is_provider_role(role) and service["provider_user_id"] == current_user["_id"]:
         return
@@ -69,6 +86,12 @@ def _authorize_service_access(
 
 
 def _validate_date_range(date_from: date, date_to: date) -> None:
+    """Handle validate date range.
+
+    Args:
+        date_from: Function argument.
+        date_to: Function argument.
+    """
     if date_to < date_from:
         raise HTTPException(status_code=422, detail="date_to must be on or after date_from")
     if (date_to - date_from).days > 31:
@@ -81,6 +104,16 @@ def _booking_for_user_or_404(
     booking_id: str,
     current_user: dict[str, Any],
 ) -> dict[str, Any]:
+    """Handle booking for user or 404.
+
+    Args:
+        database: Function argument.
+        booking_id: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     if not ObjectId.is_valid(booking_id):
         raise HTTPException(status_code=404, detail="Booking not found")
     booking = database.bookings.find_one({"_id": ObjectId(booking_id)})
@@ -105,6 +138,13 @@ def _validate_schedule_service_ids(
     provider_user_id: ObjectId,
     payload: ProviderScheduleUpsert,
 ) -> None:
+    """Handle validate schedule service ids.
+
+    Args:
+        database: Function argument.
+        provider_user_id: Function argument.
+        payload: Function argument.
+    """
     referenced = {
         service_id
         for item in [*payload.weekly_rules, *payload.exceptions]
@@ -140,6 +180,16 @@ def get_provider_schedule(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> ProviderScheduleResponse | None:
+    """Handle get provider schedule.
+
+    Args:
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     require_provider(database, current_user=current_user, request=request)
     document = database.provider_schedules.find_one(
         {"provider_user_id": current_user["_id"]}
@@ -163,6 +213,17 @@ def put_provider_schedule(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> ProviderScheduleResponse:
+    """Handle put provider schedule.
+
+    Args:
+        payload: Function argument.
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     require_provider(database, current_user=current_user, request=request)
     _validate_schedule_service_ids(
         database,
@@ -214,6 +275,18 @@ def protected_availability(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> AvailabilityResponse:
+    """Handle protected availability.
+
+    Args:
+        service_id: Function argument.
+        date_from: Function argument.
+        date_to: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     _validate_date_range(date_from, date_to)
     service = _service_or_404(database, service_id)
     _authorize_service_access(database, service=service, current_user=current_user)
@@ -243,6 +316,18 @@ def public_availability(
     date_to: date = Query(...),
     database: Database = Depends(get_database),
 ) -> AvailabilityResponse:
+    """Handle public availability.
+
+    Args:
+        slug: Function argument.
+        service_id: Function argument.
+        date_from: Function argument.
+        date_to: Function argument.
+        database: Function argument.
+
+    Returns:
+        Function result.
+    """
     _validate_date_range(date_from, date_to)
     profile = database.provider_profiles.find_one(
         {"public_slug": slug.lower(), "is_public": True}
@@ -287,6 +372,17 @@ def create_booking(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> BookingResponse:
+    """Handle create booking.
+
+    Args:
+        payload: Function argument.
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     service = _service_or_404(database, payload.service_id)
     if not service.get("active", True):
         raise HTTPException(status_code=404, detail="Service not found")
@@ -387,6 +483,19 @@ def list_my_bookings(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> list[BookingResponse]:
+    """Handle list my bookings.
+
+    Args:
+        booking_status: Function argument.
+        date_from: Function argument.
+        date_to: Function argument.
+        limit: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     role = current_user.get("role")
     if is_provider_role(role):
         query: dict[str, Any] = {"provider_user_id": current_user["_id"]}
@@ -429,6 +538,18 @@ def reschedule_booking(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> BookingResponse:
+    """Handle reschedule booking.
+
+    Args:
+        booking_id: Function argument.
+        payload: Function argument.
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     booking = _booking_for_user_or_404(
         database,
         booking_id=booking_id,
@@ -543,6 +664,17 @@ def cancel_booking(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> BookingResponse:
+    """Handle cancel booking.
+
+    Args:
+        booking_id: Function argument.
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     booking = _booking_for_user_or_404(
         database,
         booking_id=booking_id,
@@ -610,6 +742,18 @@ def update_booking_status(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> BookingResponse:
+    """Handle update booking status.
+
+    Args:
+        booking_id: Function argument.
+        payload: Function argument.
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     require_provider(database, current_user=current_user, request=request)
     booking = _booking_for_user_or_404(
         database,

@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta, timezone
@@ -24,10 +25,27 @@ UTC = timezone.utc
 
 
 def _utc(value: datetime) -> datetime:
+    """Handle utc.
+
+    Args:
+        value: Function argument.
+
+    Returns:
+        Function result.
+    """
     return value.astimezone(UTC)
 
 
 def provider_timezone(database: Database, provider_user_id: ObjectId) -> str:
+    """Handle provider timezone.
+
+    Args:
+        database: Function argument.
+        provider_user_id: Function argument.
+
+    Returns:
+        Function result.
+    """
     profile = database.provider_profiles.find_one(
         {"provider_user_id": provider_user_id},
         {"timezone": 1},
@@ -39,6 +57,15 @@ def load_schedule_payload(
     database: Database,
     provider_user_id: ObjectId,
 ) -> ProviderScheduleUpsert:
+    """Handle load schedule payload.
+
+    Args:
+        database: Function argument.
+        provider_user_id: Function argument.
+
+    Returns:
+        Function result.
+    """
     document = database.provider_schedules.find_one(
         {"provider_user_id": provider_user_id}
     )
@@ -57,6 +84,15 @@ def serialize_schedule(
     database: Database,
     document: dict[str, Any],
 ) -> ProviderScheduleResponse:
+    """Handle serialize schedule.
+
+    Args:
+        database: Function argument.
+        document: Function argument.
+
+    Returns:
+        Function result.
+    """
     payload = ProviderScheduleUpsert.model_validate(
         {
             "policy": document.get("policy", {}),
@@ -74,10 +110,29 @@ def serialize_schedule(
 
 
 def _applies_to_service(service_id: str, service_ids: list[str]) -> bool:
+    """Handle applies to service.
+
+    Args:
+        service_id: Function argument.
+        service_ids: Function argument.
+
+    Returns:
+        Function result.
+    """
     return not service_ids or service_id in service_ids
 
 
 def _local_datetime(day: date, local_time: time, tz: ZoneInfo) -> datetime:
+    """Handle local datetime.
+
+    Args:
+        day: Function argument.
+        local_time: Function argument.
+        tz: Function argument.
+
+    Returns:
+        Function result.
+    """
     return datetime.combine(day, local_time, tzinfo=tz)
 
 
@@ -86,6 +141,16 @@ def _subtract_interval(
     blocked_start: datetime,
     blocked_end: datetime,
 ) -> list[tuple[datetime, datetime]]:
+    """Handle subtract interval.
+
+    Args:
+        intervals: Function argument.
+        blocked_start: Function argument.
+        blocked_end: Function argument.
+
+    Returns:
+        Function result.
+    """
     result: list[tuple[datetime, datetime]] = []
     for start, end in intervals:
         if blocked_end <= start or blocked_start >= end:
@@ -105,6 +170,17 @@ def _available_intervals(
     service_id: str,
     tz: ZoneInfo,
 ) -> list[tuple[datetime, datetime]]:
+    """Handle available intervals.
+
+    Args:
+        schedule: Function argument.
+        day: Function argument.
+        service_id: Function argument.
+        tz: Function argument.
+
+    Returns:
+        Function result.
+    """
     intervals = [
         (
             _local_datetime(day, rule.start_local, tz),
@@ -155,6 +231,17 @@ def _reservations_by_day(
     date_from: date,
     date_to: date,
 ) -> dict[str, list[dict[str, Any]]]:
+    """Handle reservations by day.
+
+    Args:
+        database: Function argument.
+        provider_user_id: Function argument.
+        date_from: Function argument.
+        date_to: Function argument.
+
+    Returns:
+        Function result.
+    """
     documents = database.booking_calendars.find(
         {
             "provider_user_id": provider_user_id,
@@ -178,6 +265,17 @@ def _overlaps(
     *,
     ignore_booking_id: ObjectId | None = None,
 ) -> bool:
+    """Handle overlaps.
+
+    Args:
+        reservations: Function argument.
+        block_start: Function argument.
+        block_end: Function argument.
+        ignore_booking_id: Function argument.
+
+    Returns:
+        Function result.
+    """
     for reservation in reservations:
         if ignore_booking_id is not None and reservation.get("booking_id") == ignore_booking_id:
             continue
@@ -195,6 +293,19 @@ def generate_availability(
     now: datetime | None = None,
     ignore_booking_id: ObjectId | None = None,
 ) -> AvailabilityResponse:
+    """Handle generate availability.
+
+    Args:
+        database: Function argument.
+        service: Function argument.
+        date_from: Function argument.
+        date_to: Function argument.
+        now: Function argument.
+        ignore_booking_id: Function argument.
+
+    Returns:
+        Function result.
+    """
     provider_user_id: ObjectId = service["provider_user_id"]
     timezone_name = provider_timezone(database, provider_user_id)
 
@@ -294,6 +405,17 @@ def booking_block(
     starts_at: datetime,
     ends_at: datetime,
 ) -> tuple[datetime, datetime, str]:
+    """Handle booking block.
+
+    Args:
+        database: Function argument.
+        provider_user_id: Function argument.
+        starts_at: Function argument.
+        ends_at: Function argument.
+
+    Returns:
+        Function result.
+    """
     schedule = load_schedule_payload(database, provider_user_id)
     timezone_name = provider_timezone(database, provider_user_id)
     tz = ZoneInfo(timezone_name)
@@ -315,6 +437,20 @@ def _reservation_document(
     block_start: datetime,
     block_end: datetime,
 ) -> dict[str, Any]:
+    """Handle reservation document.
+
+    Args:
+        booking_id: Function argument.
+        participant_user_id: Function argument.
+        service_id: Function argument.
+        starts_at: Function argument.
+        ends_at: Function argument.
+        block_start: Function argument.
+        block_end: Function argument.
+
+    Returns:
+        Function result.
+    """
     return {
         "booking_id": booking_id,
         "participant_user_id": participant_user_id,
@@ -333,6 +469,17 @@ def reserve_interval(
     local_date: str,
     reservation: dict[str, Any],
 ) -> bool:
+    """Handle reserve interval.
+
+    Args:
+        database: Function argument.
+        provider_user_id: Function argument.
+        local_date: Function argument.
+        reservation: Function argument.
+
+    Returns:
+        Function result.
+    """
     now = datetime.now(UTC)
     query = {
         "provider_user_id": provider_user_id,
@@ -379,6 +526,14 @@ def release_interval(
     local_date: str,
     booking_id: ObjectId,
 ) -> None:
+    """Handle release interval.
+
+    Args:
+        database: Function argument.
+        provider_user_id: Function argument.
+        local_date: Function argument.
+        booking_id: Function argument.
+    """
     database.booking_calendars.update_one(
         {"provider_user_id": provider_user_id, "local_date": local_date},
         {
@@ -396,6 +551,18 @@ def move_interval_same_day(
     booking_id: ObjectId,
     reservation: dict[str, Any],
 ) -> bool:
+    """Handle move interval same day.
+
+    Args:
+        database: Function argument.
+        provider_user_id: Function argument.
+        local_date: Function argument.
+        booking_id: Function argument.
+        reservation: Function argument.
+
+    Returns:
+        Function result.
+    """
     query = {
         "provider_user_id": provider_user_id,
         "local_date": local_date,
@@ -446,6 +613,20 @@ def build_reservation(
     starts_at: datetime,
     ends_at: datetime,
 ) -> tuple[dict[str, Any], str]:
+    """Handle build reservation.
+
+    Args:
+        database: Function argument.
+        booking_id: Function argument.
+        provider_user_id: Function argument.
+        participant_user_id: Function argument.
+        service_id: Function argument.
+        starts_at: Function argument.
+        ends_at: Function argument.
+
+    Returns:
+        Function result.
+    """
     block_start, block_end, local_date = booking_block(
         database,
         provider_user_id=provider_user_id,
@@ -473,6 +654,17 @@ def is_exact_available_start(
     starts_at: datetime,
     ignore_booking_id: ObjectId | None = None,
 ) -> bool:
+    """Handle is exact available start.
+
+    Args:
+        database: Function argument.
+        service: Function argument.
+        starts_at: Function argument.
+        ignore_booking_id: Function argument.
+
+    Returns:
+        Function result.
+    """
     timezone_name = provider_timezone(database, service["provider_user_id"])
     local_date = _utc(starts_at).astimezone(ZoneInfo(timezone_name)).date()
     availability = generate_availability(
@@ -490,6 +682,15 @@ def serialize_booking(
     database: Database,
     booking: dict[str, Any],
 ) -> BookingResponse:
+    """Handle serialize booking.
+
+    Args:
+        database: Function argument.
+        booking: Function argument.
+
+    Returns:
+        Function result.
+    """
     service = database.provider_services.find_one({"_id": booking["service_id"]})
     profile = database.provider_profiles.find_one(
         {"provider_user_id": booking["provider_user_id"]},
@@ -517,4 +718,13 @@ def schedule_policy(
     database: Database,
     provider_user_id: ObjectId,
 ) -> SchedulePolicy:
+    """Handle schedule policy.
+
+    Args:
+        database: Function argument.
+        provider_user_id: Function argument.
+
+    Returns:
+        Function result.
+    """
     return load_schedule_payload(database, provider_user_id).policy
