@@ -56,11 +56,13 @@ export default function PublicProviderPage({ slug }) {
   }
 
   const { profile, services } = page
+  const bookableCount = services.filter((service) => service.capacity === 1).length
+
   return (
     <main className="public-provider-shell">
       <nav className="public-provider-nav">
         <a className="public-provider-brand" href="/"><span className="brand-mark">{APP_INITIAL}</span><strong>{APP_NAME}</strong></a>
-        <a className="secondary-button" href="/">Provider sign in</a>
+        <a className="secondary-button" href="/">Sign in</a>
       </nav>
 
       <section className="public-provider-hero">
@@ -96,7 +98,11 @@ export default function PublicProviderPage({ slug }) {
                   {service.intake_required && <span>Intake required</span>}
                 </div>
                 {service.location_labels.length > 0 && <div className="mini-tags">{service.location_labels.map((label) => <span key={label}>{label}</span>)}</div>}
-                <button className="primary-button full" type="button" disabled>Booking coming next</button>
+                {service.capacity === 1 ? (
+                  <a className="primary-button full" href={`/book/${encodeURIComponent(slug)}/${encodeURIComponent(service.id)}`}>View availability</a>
+                ) : (
+                  <button className="secondary-button full" type="button" disabled>Group booking coming soon</button>
+                )}
               </article>
             ))}
           </div>
@@ -130,7 +136,9 @@ export default function PublicProviderPage({ slug }) {
             </section>
           )}
           <section className="public-next-card">
-            <span className="kicker">Coming next</span><h3>Online booking</h3><p>Availability and booking will connect to these services when the scheduling foundation lands.</p>
+            <span className="kicker">Online booking</span>
+            <h3>{bookableCount ? `${bookableCount} service${bookableCount === 1 ? '' : 's'} available to book` : 'Booking-ready services coming soon'}</h3>
+            <p>{bookableCount ? 'Choose a 1:1 service to see live availability. Your time is only reserved after confirmation.' : 'This provider has not published a 1:1 service with booking availability yet.'}</p>
           </section>
         </aside>
       </div>

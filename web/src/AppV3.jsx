@@ -11,6 +11,7 @@ import {
   readSessionToken,
 } from './brand'
 import BusinessWorkspace from './BusinessWorkspace'
+import CalendarWorkspace from './CalendarWorkspace'
 import { IS_DEMO_MODE } from './demoApi'
 import IntegrationsWorkspace from './IntegrationsWorkspace'
 import MessagesWorkspace from './MessagesWorkspace'
@@ -18,11 +19,13 @@ import Overview from './Overview'
 import PeopleWorkspace from './PeopleWorkspace'
 import { isProviderRole, TRACK_META } from './platformMeta'
 import PortalWorkspace from './PortalWorkspace'
+import PublicBookingPage from './PublicBookingPage'
 import PublicProviderPage from './PublicProviderPage'
 
 const NAV_ITEMS = [
   ['home', 'Overview', 'OV'],
   ['business', 'Business', 'BU'],
+  ['calendar', 'Calendar', 'CA'],
   ['portal', 'Plans & progress', 'PL'],
   ['messages', 'Messages', 'MS'],
   ['clients', 'People', 'PE'],
@@ -36,6 +39,7 @@ function navLabel(key, defaultLabel, isProvider) {
   if (isProvider) return defaultLabel
   return {
     home: 'Patient home',
+    calendar: 'Appointments',
     portal: 'My plans & progress',
     messages: 'My messages',
   }[key] || defaultLabel
@@ -45,6 +49,7 @@ function viewTitle(view) {
   return {
     home: 'Overview',
     business: 'Business',
+    calendar: 'Calendar',
     portal: 'Plans & progress',
     messages: 'Messages',
     clients: 'People',
@@ -55,17 +60,21 @@ function viewTitle(view) {
 
 function AppV3() {
   const publicMatch = window.location.pathname.match(/^\/p\/([^/]+)\/?$/)
+  const bookingMatch = window.location.pathname.match(/^\/book\/([^/]+)\/([^/]+)\/?$/)
   const publicSlug = publicMatch ? decodeURIComponent(publicMatch[1]) : ''
+  const bookingSlug = bookingMatch ? decodeURIComponent(bookingMatch[1]) : ''
+  const bookingServiceId = bookingMatch ? decodeURIComponent(bookingMatch[2]) : ''
+  const isPublicRoute = Boolean(publicSlug || bookingMatch)
   const [token, setToken] = useState(() => readSessionToken())
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(Boolean(token) && !publicSlug)
+  const [loading, setLoading] = useState(Boolean(token) && !isPublicRoute)
 
   useEffect(() => {
-    if (!publicSlug) document.title = `${APP_NAME} Portal`
-  }, [publicSlug])
+    if (!isPublicRoute) document.title = `${APP_NAME} Portal`
+  }, [isPublicRoute])
 
   useEffect(() => {
-    if (publicSlug) {
+    if (isPublicRoute) {
       setLoading(false)
       return
     }
@@ -95,7 +104,7 @@ function AppV3() {
     return () => {
       cancelled = true
     }
-  }, [token, publicSlug])
+  }, [token, isPublicRoute])
 
   function handleToken(nextToken) {
     sessionStorage.setItem(SESSION_TOKEN_KEY, nextToken)
@@ -108,6 +117,7 @@ function AppV3() {
     setUser(null)
   }
 
+  if (bookingMatch) return <PublicBookingPage slug={bookingSlug} serviceId={bookingServiceId} />
   if (publicSlug) return <PublicProviderPage slug={publicSlug} />
 
   if (loading) {
@@ -347,6 +357,7 @@ function PlatformWorkspace({ token, user, onLogout }) {
               />
             )}
             {view === 'business' && isProvider && <BusinessWorkspace token={token} />}
+            {view === 'calendar' && <CalendarWorkspace token={token} isProvider={isProvider} people={people} />}
             {view === 'portal' && (
               <PortalWorkspace
                 isProvider={isProvider}

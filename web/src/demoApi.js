@@ -6,12 +6,69 @@ export const DEMO_PROVIDER_TOKEN = 'clinly-demo-provider-session'
 export const DEMO_PATIENT_TOKEN = 'clinly-demo-patient-session'
 
 const PROVIDER_ID = 'demo-provider-1'
+const PROVIDER_TIMEZONE = 'America/New_York'
 
 function daysAgo(days, hour = 14) {
   const value = new Date()
   value.setHours(hour, 0, 0, 0)
   value.setDate(value.getDate() - days)
   return value.toISOString()
+}
+
+function dateInput(daysAhead = 0) {
+  const value = new Date()
+  value.setDate(value.getDate() + daysAhead)
+  const local = new Date(value.getTime() - value.getTimezoneOffset() * 60_000)
+  return local.toISOString().slice(0, 10)
+}
+
+function zonedIso(dateText, timeText, timeZone = PROVIDER_TIMEZONE) {
+  const [year, month, day] = dateText.split('-').map(Number)
+  const [hour, minute] = timeText.split(':').map(Number)
+  const guess = Date.UTC(year, month - 1, day, hour, minute)
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date(guess))
+  const values = Object.fromEntries(parts.filter((part) => part.type !== 'literal').map((part) => [part.type, Number(part.value)]))
+  const represented = Date.UTC(values.year, values.month - 1, values.day, values.hour, values.minute)
+  return new Date(guess - (represented - guess)).toISOString()
+}
+
+function addMinutes(value, minutes) {
+  return new Date(new Date(value).getTime() + minutes * 60_000).toISOString()
+}
+
+function minutesFromClock(value) {
+  const [hour, minute] = String(value).slice(0, 5).split(':').map(Number)
+  return hour * 60 + minute
+}
+
+function clockFromMinutes(value) {
+  const hour = String(Math.floor(value / 60)).padStart(2, '0')
+  const minute = String(value % 60).padStart(2, '0')
+  return `${hour}:${minute}`
+}
+
+function weekdayForDate(dateText) {
+  const day = new Date(`${dateText}T12:00:00Z`).getUTCDay()
+  return (day + 6) % 7
+}
+
+function datesBetween(from, to) {
+  const dates = []
+  const cursor = new Date(`${from}T12:00:00Z`)
+  const end = new Date(`${to}T12:00:00Z`)
+  while (cursor <= end && dates.length < 31) {
+    dates.push(cursor.toISOString().slice(0, 10))
+    cursor.setUTCDate(cursor.getUTCDate() + 1)
+  }
+  return dates
 }
 
 function seedState() {
@@ -34,6 +91,15 @@ function seedState() {
     client_id: person.id,
     created_at: daysAgo(18 - index * 3),
   }))
+
+  const services = [
+    { id: 'demo-service-1', provider_user_id: PROVIDER_ID, name: 'Progress planning session', description: 'A focused session to define the next milestone and build a realistic action plan.', duration_minutes: 60, price_minor: 9500, currency: 'USD', delivery_mode: 'HYBRID', capacity: 1, location_labels: ['Virtual', 'Midtown studio'], intake_required: true, is_public: true, active: true, created_at: daysAgo(70), updated_at: daysAgo(8), archived_at: null },
+    { id: 'demo-service-2', provider_user_id: PROVIDER_ID, name: 'Monthly accountability', description: 'Ongoing check-ins, secure messaging, and shared progress tracking.', duration_minutes: 30, price_minor: 14900, currency: 'USD', delivery_mode: 'VIRTUAL', capacity: 1, location_labels: ['Virtual'], intake_required: false, is_public: true, active: true, created_at: daysAgo(64), updated_at: daysAgo(12), archived_at: null },
+  ]
+
+  const firstStart = zonedIso(dateInput(1), '10:00')
+  const secondStart = zonedIso(dateInput(2), '14:00')
+  const now = new Date().toISOString()
 
   return {
     providerUser: { id: PROVIDER_ID, email: DEMO_PROVIDER_EMAIL, role: 'PROVIDER', provider_id: null, is_active: true },
@@ -63,7 +129,7 @@ function seedState() {
       bio: 'I help people turn big goals into clear, repeatable steps through connected plans, check-ins, and ongoing accountability.',
       categories: ['Wellness', 'Fitness', 'Accountability'],
       pronouns: 'they/them',
-      timezone: 'America/New_York',
+      timezone: PROVIDER_TIMEZONE,
       locale: 'en-US',
       locations: [
         { label: 'Virtual', kind: 'VIRTUAL', address: null, public: true },
@@ -77,9 +143,28 @@ function seedState() {
       created_at: daysAgo(120),
       updated_at: daysAgo(5),
     },
-    services: [
-      { id: 'demo-service-1', provider_user_id: PROVIDER_ID, name: 'Progress planning session', description: 'A focused session to define the next milestone and build a realistic action plan.', duration_minutes: 60, price_minor: 9500, currency: 'USD', delivery_mode: 'HYBRID', capacity: 1, location_labels: ['Virtual', 'Midtown studio'], intake_required: true, is_public: true, active: true, created_at: daysAgo(70), updated_at: daysAgo(8), archived_at: null },
-      { id: 'demo-service-2', provider_user_id: PROVIDER_ID, name: 'Monthly accountability', description: 'Ongoing check-ins, secure messaging, and shared progress tracking.', duration_minutes: 30, price_minor: 14900, currency: 'USD', delivery_mode: 'VIRTUAL', capacity: 1, location_labels: ['Virtual'], intake_required: false, is_public: true, active: true, created_at: daysAgo(64), updated_at: daysAgo(12), archived_at: null },
+    services,
+    schedule: {
+      provider_user_id: PROVIDER_ID,
+      timezone: PROVIDER_TIMEZONE,
+      policy: {
+        slot_interval_minutes: 30,
+        minimum_notice_minutes: 60,
+        booking_horizon_days: 60,
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 15,
+        cancellation_notice_minutes: 120,
+        participant_reschedule_enabled: true,
+        participant_cancel_enabled: true,
+      },
+      weekly_rules: [0, 1, 2, 3, 4].map((weekday) => ({ weekday, start_local: '09:00', end_local: '17:00', service_ids: [] })),
+      exceptions: [],
+      created_at: daysAgo(90),
+      updated_at: daysAgo(3),
+    },
+    bookings: [
+      { id: 'demo-booking-1', provider_user_id: PROVIDER_ID, participant_user_id: people[0].id, service_id: services[0].id, service_name: services[0].name, provider_display_name: 'Morgan Reed', starts_at: firstStart, ends_at: addMinutes(firstStart, services[0].duration_minutes), provider_timezone: PROVIDER_TIMEZONE, status: 'CONFIRMED', created_by_user_id: people[0].id, created_at: now, updated_at: now, cancelled_at: null },
+      { id: 'demo-booking-2', provider_user_id: PROVIDER_ID, participant_user_id: people[1].id, service_id: services[1].id, service_name: services[1].name, provider_display_name: 'Morgan Reed', starts_at: secondStart, ends_at: addMinutes(secondStart, services[1].duration_minutes), provider_timezone: PROVIDER_TIMEZONE, status: 'CONFIRMED', created_by_user_id: PROVIDER_ID, created_at: now, updated_at: now, cancelled_at: null },
     ],
     integrations: [
       { key: 'google_calendar', display_name: 'Google Calendar', category: 'CALENDAR', description: 'Sync provider availability and bookings with Google Calendar.', capabilities: ['calendar_read', 'calendar_write', 'booking_sync'], availability: 'PLANNED', entitlement: 'PAID_ADDON', setup_type: 'OAUTH2_PKCE' },
@@ -140,6 +225,98 @@ function conversationsForToken(token) {
 
 function makeId(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`
+}
+
+function bookableService(service) {
+  return {
+    id: service.id,
+    name: service.name,
+    description: service.description,
+    duration_minutes: service.duration_minutes,
+    price_minor: service.price_minor,
+    currency: service.currency,
+    delivery_mode: service.delivery_mode,
+    capacity: service.capacity,
+    location_labels: service.location_labels,
+    intake_required: service.intake_required,
+    provider_user_id: PROVIDER_ID,
+    provider_display_name: state.profile.display_name,
+  }
+}
+
+function slotsFor(serviceId, dateFrom, dateTo) {
+  const service = state.services.find((item) => item.id === serviceId && item.active && !item.archived_at)
+  if (!service || service.capacity !== 1) return []
+  const slots = []
+  const policy = state.schedule.policy
+  const noticeCutoff = Date.now() + policy.minimum_notice_minutes * 60_000
+
+  for (const dateLocal of datesBetween(dateFrom, dateTo)) {
+    const weekday = weekdayForDate(dateLocal)
+    let windows = state.schedule.weekly_rules
+      .filter((rule) => rule.weekday === weekday && (!rule.service_ids.length || rule.service_ids.includes(serviceId)))
+      .map((rule) => [rule.start_local, rule.end_local])
+
+    const exceptions = state.schedule.exceptions.filter((item) => item.date_local === dateLocal && (!item.service_ids?.length || item.service_ids.includes(serviceId)))
+    if (exceptions.some((item) => item.kind === 'UNAVAILABLE' && !item.start_local && !item.end_local)) windows = []
+    windows.push(...exceptions.filter((item) => item.kind === 'AVAILABLE').map((item) => [item.start_local, item.end_local]))
+
+    for (const [startClock, endClock] of windows) {
+      const startMinutes = minutesFromClock(startClock)
+      const endMinutes = minutesFromClock(endClock)
+      for (let minute = startMinutes; minute + service.duration_minutes <= endMinutes; minute += policy.slot_interval_minutes) {
+        const startsAt = zonedIso(dateLocal, clockFromMinutes(minute), state.schedule.timezone)
+        const endsAt = addMinutes(startsAt, service.duration_minutes)
+        if (new Date(startsAt).getTime() < noticeCutoff) continue
+
+        const blockedByPartialException = exceptions.some((item) => {
+          if (item.kind !== 'UNAVAILABLE' || !item.start_local || !item.end_local) return false
+          const blockedStart = zonedIso(dateLocal, item.start_local, state.schedule.timezone)
+          const blockedEnd = zonedIso(dateLocal, item.end_local, state.schedule.timezone)
+          return new Date(startsAt) < new Date(blockedEnd) && new Date(endsAt) > new Date(blockedStart)
+        })
+        if (blockedByPartialException) continue
+
+        const overlaps = state.bookings.some((booking) => booking.status === 'CONFIRMED' && new Date(startsAt) < new Date(addMinutes(booking.ends_at, policy.buffer_after_minutes)) && new Date(endsAt) > new Date(booking.starts_at))
+        if (overlaps) continue
+
+        slots.push({ starts_at: startsAt, ends_at: endsAt, provider_timezone: state.schedule.timezone, local_date: dateLocal })
+      }
+    }
+  }
+  return slots
+}
+
+function createBooking(body, token) {
+  const service = state.services.find((item) => item.id === body.service_id && item.active && !item.archived_at)
+  if (!service || service.capacity !== 1) fail('This service is not available for 1:1 booking.', 422)
+  const participantId = token === DEMO_PROVIDER_TOKEN ? body.participant_id : state.people[0].id
+  if (!participantId || !state.people.some((person) => person.id === participantId)) fail('Choose a valid demo person.', 422)
+
+  const localDate = new Intl.DateTimeFormat('en-CA', { timeZone: state.schedule.timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(body.starts_at))
+  const available = slotsFor(service.id, localDate, localDate).some((slot) => slot.starts_at === new Date(body.starts_at).toISOString())
+  if (!available) fail('That time is no longer available. Choose another slot.', 409)
+
+  const now = new Date().toISOString()
+  const startsAt = new Date(body.starts_at).toISOString()
+  const booking = {
+    id: makeId('demo-booking'),
+    provider_user_id: PROVIDER_ID,
+    participant_user_id: participantId,
+    service_id: service.id,
+    service_name: service.name,
+    provider_display_name: state.profile.display_name,
+    starts_at: startsAt,
+    ends_at: addMinutes(startsAt, service.duration_minutes),
+    provider_timezone: state.schedule.timezone,
+    status: 'CONFIRMED',
+    created_by_user_id: userForToken(token).id,
+    created_at: now,
+    updated_at: now,
+    cancelled_at: null,
+  }
+  state.bookings.push(booking)
+  return booking
 }
 
 export function resetDemoState() {
@@ -218,6 +395,7 @@ export async function demoApiRequest(path, options = {}) {
   if (pathname === '/provider/profile' && method === 'GET') return response(state.profile)
   if (pathname === '/provider/profile' && method === 'PUT') {
     state.profile = { ...state.profile, ...parseBody(options), provider_user_id: PROVIDER_ID, updated_at: new Date().toISOString() }
+    state.schedule.timezone = state.profile.timezone
     return response(state.profile)
   }
   if (pathname === '/provider/services' && method === 'GET') return response(state.services)
@@ -227,8 +405,9 @@ export async function demoApiRequest(path, options = {}) {
     state.services.unshift(service)
     return response(service)
   }
-  if (pathname.startsWith('/provider/services/')) {
-    const id = pathname.split('/').pop()
+  const serviceAction = pathname.match(/^\/provider\/services\/([^/]+)$/)
+  if (serviceAction) {
+    const id = decodeURIComponent(serviceAction[1])
     const index = state.services.findIndex((service) => service.id === id)
     if (index < 0) fail('Demo service not found.', 404)
     if (method === 'PATCH') {
@@ -236,16 +415,97 @@ export async function demoApiRequest(path, options = {}) {
       return response(state.services[index])
     }
     if (method === 'DELETE') {
-      const [archived] = state.services.splice(index, 1)
-      return response({ ...archived, archived_at: new Date().toISOString() })
+      state.services[index] = { ...state.services[index], active: false, archived_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+      return response(state.services[index])
+    }
+  }
+
+  if (pathname === '/provider/schedule' && method === 'GET') {
+    if (options.token !== DEMO_PROVIDER_TOKEN) fail('Provider access required.', 403)
+    return response(state.schedule)
+  }
+  if (pathname === '/provider/schedule' && method === 'PUT') {
+    if (options.token !== DEMO_PROVIDER_TOKEN) fail('Provider access required.', 403)
+    const body = parseBody(options)
+    state.schedule = { ...state.schedule, ...body, timezone: state.profile.timezone, updated_at: new Date().toISOString() }
+    return response(state.schedule)
+  }
+
+  if (pathname === '/booking-services' && method === 'GET') {
+    const services = state.services.filter((service) => service.active && !service.archived_at && (options.token === DEMO_PROVIDER_TOKEN || service.is_public))
+    return response(services.map(bookableService))
+  }
+
+  if (pathname === '/availability' && method === 'GET') {
+    const serviceId = url.searchParams.get('service_id')
+    const dateFrom = url.searchParams.get('date_from') || dateInput(1)
+    const dateTo = url.searchParams.get('date_to') || dateFrom
+    return response({ service_id: serviceId, provider_user_id: PROVIDER_ID, provider_timezone: state.schedule.timezone, date_from: dateFrom, date_to: dateTo, slots: slotsFor(serviceId, dateFrom, dateTo) })
+  }
+
+  if (pathname === '/bookings/me' && method === 'GET') {
+    const bookings = options.token === DEMO_PROVIDER_TOKEN ? state.bookings : state.bookings.filter((booking) => booking.participant_user_id === state.people[0].id)
+    return response([...bookings].sort((a, b) => a.starts_at.localeCompare(b.starts_at)))
+  }
+  if (pathname === '/bookings' && method === 'POST') return response(createBooking(parseBody(options), options.token))
+
+  const bookingAction = pathname.match(/^\/bookings\/([^/]+)\/(reschedule|cancel|status)$/)
+  if (bookingAction) {
+    const id = decodeURIComponent(bookingAction[1])
+    const action = bookingAction[2]
+    const index = state.bookings.findIndex((booking) => booking.id === id)
+    if (index < 0) fail('Demo booking not found.', 404)
+    const booking = state.bookings[index]
+    if (options.token !== DEMO_PROVIDER_TOKEN && booking.participant_user_id !== state.people[0].id) fail('This booking belongs to another demo member.', 403)
+
+    if (action === 'reschedule' && method === 'PATCH') {
+      const body = parseBody(options)
+      const service = state.services.find((item) => item.id === booking.service_id)
+      const previousStatus = booking.status
+      booking.status = 'CANCELLED'
+      const localDate = new Intl.DateTimeFormat('en-CA', { timeZone: state.schedule.timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(body.starts_at))
+      const available = slotsFor(service.id, localDate, localDate).some((slot) => slot.starts_at === new Date(body.starts_at).toISOString())
+      booking.status = previousStatus
+      if (!available) fail('That time is no longer available.', 409)
+      booking.starts_at = new Date(body.starts_at).toISOString()
+      booking.ends_at = addMinutes(booking.starts_at, service.duration_minutes)
+      booking.updated_at = new Date().toISOString()
+      return response(booking)
+    }
+    if (action === 'cancel' && method === 'POST') {
+      booking.status = 'CANCELLED'
+      booking.cancelled_at = new Date().toISOString()
+      booking.updated_at = booking.cancelled_at
+      return response(booking)
+    }
+    if (action === 'status' && method === 'PATCH') {
+      if (options.token !== DEMO_PROVIDER_TOKEN) fail('Provider access required.', 403)
+      const nextStatus = parseBody(options).status
+      if (!['COMPLETED', 'NO_SHOW'].includes(nextStatus)) fail('Unsupported booking status.', 422)
+      booking.status = nextStatus
+      booking.updated_at = new Date().toISOString()
+      return response(booking)
     }
   }
 
   if (pathname === '/integrations/catalog') return response(state.integrations)
   if (pathname === '/integrations/connections') return response(state.connections)
 
-  if (pathname.startsWith('/public/providers/')) {
-    const slug = decodeURIComponent(pathname.split('/').pop())
+  const publicSlots = pathname.match(/^\/public\/providers\/([^/]+)\/services\/([^/]+)\/slots$/)
+  if (publicSlots && method === 'GET') {
+    const slug = decodeURIComponent(publicSlots[1])
+    const serviceId = decodeURIComponent(publicSlots[2])
+    if (slug !== state.profile.public_slug || !state.profile.is_public) fail('This provider page is not published.', 404)
+    const service = state.services.find((item) => item.id === serviceId && item.is_public && item.active && !item.archived_at)
+    if (!service) fail('This service is not published.', 404)
+    const dateFrom = url.searchParams.get('date_from') || dateInput(1)
+    const dateTo = url.searchParams.get('date_to') || dateFrom
+    return response({ service_id: serviceId, provider_user_id: PROVIDER_ID, provider_timezone: state.schedule.timezone, date_from: dateFrom, date_to: dateTo, slots: slotsFor(serviceId, dateFrom, dateTo) })
+  }
+
+  const publicProvider = pathname.match(/^\/public\/providers\/([^/]+)$/)
+  if (publicProvider && method === 'GET') {
+    const slug = decodeURIComponent(publicProvider[1])
     if (slug !== state.profile.public_slug || !state.profile.is_public) fail('This provider page is not published.', 404)
     const publicProfile = copy(state.profile)
     delete publicProfile.provider_user_id
@@ -254,7 +514,7 @@ export async function demoApiRequest(path, options = {}) {
     delete publicProfile.is_public
     publicProfile.locations = publicProfile.locations.filter((item) => item.public)
     publicProfile.credentials = publicProfile.credentials.filter((item) => item.public)
-    const services = state.services.filter((item) => item.is_public && item.active).map(({ provider_user_id, created_at, updated_at, archived_at, active, is_public, ...item }) => item)
+    const services = state.services.filter((item) => item.is_public && item.active && !item.archived_at).map(({ provider_user_id, created_at, updated_at, archived_at, active, is_public, ...item }) => item)
     return response({ profile: publicProfile, services })
   }
 
