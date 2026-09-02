@@ -142,6 +142,7 @@ function AppV3() {
 function PlatformWorkspace({ token, user, onLogout }) {
   const isProvider = isProviderRole(user.role)
   const [view, setView] = useState('home')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [people, setPeople] = useState([])
   const [tracks, setTracks] = useState([])
   const [conversations, setConversations] = useState([])
@@ -218,6 +219,11 @@ function PlatformWorkspace({ token, user, onLogout }) {
   function flash(message) {
     setNotice(message)
     window.setTimeout(() => setNotice(''), 2600)
+  }
+
+  function openView(nextView) {
+    setView(nextView)
+    setSidebarOpen(false)
   }
 
   async function createPerson(values) {
@@ -309,7 +315,9 @@ function PlatformWorkspace({ token, user, onLogout }) {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      {sidebarOpen && <button className="sidebar-backdrop" type="button" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} />}
+      <aside className={sidebarOpen ? 'sidebar mobile-open' : 'sidebar'}>
+        <button className="sidebar-close-button" type="button" aria-label="Close menu" onClick={() => setSidebarOpen(false)}>×</button>
         <div className="brand-lockup sidebar-brand">
           <div className="brand-mark">{APP_INITIAL}</div>
           <span>{APP_NAME}</span>
@@ -318,7 +326,7 @@ function PlatformWorkspace({ token, user, onLogout }) {
         <span className="sidebar-label">Workspace</span>
         <nav>
           {visibleNav.map(([key, label, icon]) => (
-            <button key={key} className={view === key ? 'nav-button active' : 'nav-button'} type="button" onClick={() => setView(key)}>
+            <button key={key} className={view === key ? 'nav-button active' : 'nav-button'} type="button" onClick={() => openView(key)}>
               <span className="nav-icon" aria-hidden="true">{icon}</span><span>{navLabel(key, label, isProvider)}</span>
             </button>
           ))}
@@ -327,11 +335,15 @@ function PlatformWorkspace({ token, user, onLogout }) {
           <span className="avatar">{user.email.slice(0, 1).toUpperCase()}</span>
           <div><strong>{isProvider ? 'Provider' : 'Patient'}</strong><span>{user.email}</span></div>
         </div>
+        {IS_DEMO_MODE && <a className="secondary-button full demo-home-link" href="/demo">Switch demo</a>}
         <button className="secondary-button full" type="button" onClick={onLogout}>Sign out</button>
       </aside>
 
       <main className="main-content">
         <header className="topbar">
+          <button className="mobile-menu-button" type="button" aria-label="Open navigation menu" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)}>
+            <span className="menu-lines" aria-hidden="true">☰</span> Menu
+          </button>
           <div>
             <span className="kicker">{isProvider ? 'Provider workspace' : 'Patient portal'}</span>
             <h1>{viewTitle(view)}</h1>
@@ -343,7 +355,10 @@ function PlatformWorkspace({ token, user, onLogout }) {
           <div className="demo-banner">
             <strong>Demo environment</strong>
             <span>Explore freely—changes are local to this tab and no real personal data is used.</span>
-            <a href="https://github.com/mergemaven11/clinly-backbone" target="_blank" rel="noreferrer">View source</a>
+            <div className="demo-banner-actions">
+              <a href="/demo">← Back to demo home</a>
+              <a href="https://github.com/mergemaven11/clinly-backbone" target="_blank" rel="noreferrer">View source</a>
+            </div>
           </div>
         )}
 
