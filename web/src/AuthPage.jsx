@@ -122,6 +122,7 @@ export default function AuthPage({ onToken }) {
               {mode === 'login' ? 'I need a provider account' : 'I already have an account'}
             </button>
           )}
+          <a className="secondary-button full" href="/docs">Read the Clinly customer guide</a>
         </form>
       </section>
     </main>
