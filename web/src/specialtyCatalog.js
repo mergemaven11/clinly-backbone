@@ -96,15 +96,7 @@ export function familyForSpecialty(specialtyKey) {
 export function matchesSpecialty(item, query = '') {
   const normalized = query.trim().toLowerCase()
   if (!normalized) return true
-
-  const label = item.label.toLowerCase()
-  if (label.startsWith(normalized)) return true
-
-  // Keep short browse queries strict to the visible provider name so a single
-  // letter cannot surface unrelated providers because of an alias.
-  if (normalized.length < 2) return false
-
-  return (item.aliases || []).some((value) => value.toLowerCase().startsWith(normalized))
+  return item.label.toLowerCase().startsWith(normalized)
 }
 
 export function templatePlansForSpecialty(specialtyKey) {
