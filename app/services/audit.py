@@ -1,3 +1,10 @@
+"""Append-only audit logging helpers for security-sensitive Clinly actions.
+
+Audit records intentionally retain only a narrow set of metadata. Callers
+should never place message bodies, credentials, tokens, journal contents, or
+other PHI-bearing request data into audit metadata.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -21,11 +28,32 @@ def log_audit_event(
     request: Request | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> None:
-    """Insert an append-only audit event.
+    """Insert an append-only, privacy-conscious audit event.
 
-    This module intentionally exposes no update or delete operation. Metadata
-    is allowlisted so callers cannot accidentally persist message bodies,
-    passwords, tokens, or other PHI-bearing request data.
+    The function records security-relevant context without exposing an update
+    or delete path. Metadata is allowlisted so callers cannot accidentally
+    persist sensitive request content. When an HTTP request is supplied, the
+    client IP address and user agent are captured for operational auditing.
+
+    Args:
+        database: MongoDB database containing the ``audit_events`` collection.
+        action: Stable event name describing the attempted operation.
+        success: Whether the audited operation completed successfully.
+        actor_user_id: Identifier of the user who initiated the operation.
+        subject_user_id: Identifier of the user affected by the operation.
+        resource_type: Logical resource category, such as ``portal_entry``.
+        resource_id: Identifier of the affected resource when available.
+        request: Optional FastAPI request used to capture network context.
+        metadata: Optional supplementary metadata. Only explicitly allowlisted
+            keys are persisted.
+
+    Returns:
+        None.
+
+    Note:
+        This helper does not redact arbitrary metadata values. Safety depends on
+        keeping ``_ALLOWED_METADATA_KEYS`` narrow and avoiding sensitive data in
+        approved fields.
     """
     safe_metadata = {
         key: value
