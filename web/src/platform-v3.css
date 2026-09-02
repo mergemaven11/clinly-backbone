@@ -5,6 +5,160 @@
   margin-top: 1.2rem;
 }
 
+.mobile-menu-button,
+.sidebar-close-button,
+.sidebar-backdrop {
+  display: none;
+}
+
+.demo-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.demo-banner-actions a {
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    display: block;
+  }
+
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 60;
+    width: min(320px, 86vw);
+    height: 100dvh;
+    padding: 20px 16px;
+    transform: translateX(-105%);
+    transition: transform .2s ease;
+    box-shadow: 18px 0 48px rgba(20, 32, 45, .18);
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .sidebar .sidebar-brand > span,
+  .sidebar .nav-button,
+  .sidebar .nav-button:not(.active) {
+    font-size: 13px;
+  }
+
+  .sidebar .sidebar-brand > span:first-of-type {
+    font-size: 21px;
+  }
+
+  .sidebar .beta-badge {
+    font-size: 8px;
+  }
+
+  .sidebar .nav-icon {
+    flex: 0 0 27px;
+  }
+
+  .sidebar-brand {
+    padding-right: 42px;
+  }
+
+  .sidebar-close-button {
+    position: absolute;
+    top: 18px;
+    right: 14px;
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border: 0;
+    border-radius: 10px;
+    background: #eef3f3;
+    color: #435461;
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: block;
+    border: 0;
+    background: rgba(15, 25, 36, .38);
+  }
+
+  .mobile-menu-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+    padding: 9px 11px;
+    border: 1px solid #dfe5ed;
+    border-radius: 11px;
+    background: #fff;
+    color: #344057;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .mobile-menu-button .menu-lines {
+    font-size: 17px;
+    line-height: 1;
+  }
+
+  .main-content {
+    padding: 22px 18px 48px;
+  }
+
+  .topbar {
+    align-items: flex-start;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .topbar > div:first-of-type {
+    flex: 1 1 180px;
+  }
+
+  .privacy-chip {
+    margin-left: auto;
+  }
+
+  .demo-banner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .demo-banner-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 600px) {
+  .topbar {
+    gap: 12px;
+  }
+
+  .topbar h1 {
+    font-size: 31px;
+  }
+
+  .privacy-chip {
+    width: 100%;
+    justify-content: center;
+    margin-left: 0;
+  }
+
+  .demo-banner-actions {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
 @media (max-width: 760px) {
   .hero-actions .primary-button,
   .hero-actions .secondary-button {
