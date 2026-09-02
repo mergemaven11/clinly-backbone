@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -17,6 +18,14 @@ router = APIRouter(prefix="/conversations", tags=["conversations"])
 
 
 def _serialize_conversation(conversation: dict[str, Any]) -> ConversationResponse:
+    """Handle serialize conversation.
+
+    Args:
+        conversation: Function argument.
+
+    Returns:
+        Function result.
+    """
     return ConversationResponse(
         id=str(conversation["_id"]),
         therapist_id=str(conversation["therapist_id"]),
@@ -44,6 +53,17 @@ def create_conversation(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> ConversationResponse:
+    """Handle create conversation.
+
+    Args:
+        payload: Function argument.
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     require_therapist(database, current_user=current_user, request=request)
     client = authorize_subject_client_access(
         database,
@@ -94,6 +114,16 @@ def list_my_conversations(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> list[ConversationResponse]:
+    """Handle list my conversations.
+
+    Args:
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     role = current_user.get("role")
     if role == UserRole.THERAPIST.value:
         query = {"therapist_id": current_user["_id"]}

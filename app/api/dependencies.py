@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from typing import Any
@@ -15,6 +16,14 @@ bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_database(request: Request) -> Database:
+    """Handle get database.
+
+    Args:
+        request: Function argument.
+
+    Returns:
+        Function result.
+    """
     return request.app.state.mongo.db()
 
 
@@ -23,6 +32,16 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     database: Database = Depends(get_database),
 ) -> dict[str, Any]:
+    """Handle get current user.
+
+    Args:
+        request: Function argument.
+        credentials: Function argument.
+        database: Function argument.
+
+    Returns:
+        Function result.
+    """
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

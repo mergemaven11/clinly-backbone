@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 import hashlib
@@ -9,6 +10,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class RateLimitDecision:
+    """Represent RateLimitDecision."""
     allowed: bool
     retry_after_seconds: int = 0
 
@@ -29,6 +31,13 @@ class LoginRateLimiter:
         ip_max_attempts: int,
         window_seconds: int,
     ) -> None:
+        """Initialize the instance.
+
+        Args:
+            identity_max_attempts: Function argument.
+            ip_max_attempts: Function argument.
+            window_seconds: Function argument.
+        """
         self._identity_max_attempts = identity_max_attempts
         self._ip_max_attempts = ip_max_attempts
         self._window_seconds = window_seconds
@@ -37,21 +46,54 @@ class LoginRateLimiter:
 
     @staticmethod
     def _digest(namespace: str, value: str) -> str:
+        """Handle digest.
+
+        Args:
+            namespace: Function argument.
+            value: Function argument.
+
+        Returns:
+            Function result.
+        """
         normalized = value.strip().lower()
         return hashlib.sha256(f"{namespace}:{normalized}".encode()).hexdigest()
 
     def _keys(self, email: str, ip_address: str) -> tuple[str, str]:
+        """Handle keys.
+
+        Args:
+            email: Function argument.
+            ip_address: Function argument.
+
+        Returns:
+            Function result.
+        """
         return (
             self._digest("identity", email),
             self._digest("ip", ip_address or "unknown"),
         )
 
     def _prune(self, bucket: deque[float], now: float) -> None:
+        """Handle prune.
+
+        Args:
+            bucket: Function argument.
+            now: Function argument.
+        """
         cutoff = now - self._window_seconds
         while bucket and bucket[0] <= cutoff:
             bucket.popleft()
 
     def check(self, *, email: str, ip_address: str) -> RateLimitDecision:
+        """Handle check.
+
+        Args:
+            email: Function argument.
+            ip_address: Function argument.
+
+        Returns:
+            Function result.
+        """
         now = time.monotonic()
         identity_key, ip_key = self._keys(email, ip_address)
         with self._lock:
@@ -79,6 +121,12 @@ class LoginRateLimiter:
             )
 
     def record_failure(self, *, email: str, ip_address: str) -> None:
+        """Handle record failure.
+
+        Args:
+            email: Function argument.
+            ip_address: Function argument.
+        """
         now = time.monotonic()
         identity_key, ip_key = self._keys(email, ip_address)
         with self._lock:
@@ -88,6 +136,11 @@ class LoginRateLimiter:
                 bucket.append(now)
 
     def reset_identity(self, *, email: str) -> None:
+        """Handle reset identity.
+
+        Args:
+            email: Function argument.
+        """
         identity_key = self._digest("identity", email)
         with self._lock:
             self._attempts.pop(identity_key, None)

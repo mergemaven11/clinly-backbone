@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 import logging
@@ -102,6 +103,14 @@ app.include_router(audit_router)
 
 
 def _request_id(request: Request) -> str:
+    """Handle request id.
+
+    Args:
+        request: Function argument.
+
+    Returns:
+        Function result.
+    """
     supplied = request.headers.get("X-Request-ID", "").strip()
     if supplied and len(supplied) <= 128:
         return supplied

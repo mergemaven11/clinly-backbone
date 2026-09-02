@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -12,6 +13,11 @@ PASSWORD = "StrongPass123!"
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:
+    """Handle client.
+
+    Yields:
+        Values produced by the function.
+    """
     with TestClient(app) as test_client:
         database = app.state.mongo.db()
         collections = (
@@ -30,6 +36,15 @@ def client() -> Iterator[TestClient]:
 
 
 def _signup(client: TestClient, email: str) -> dict:
+    """Handle signup.
+
+    Args:
+        client: Function argument.
+        email: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/auth/signup-therapist",
         json={"email": email, "password": PASSWORD},
@@ -39,6 +54,15 @@ def _signup(client: TestClient, email: str) -> dict:
 
 
 def _login(client: TestClient, email: str) -> str:
+    """Handle login.
+
+    Args:
+        client: Function argument.
+        email: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/auth/login",
         json={"email": email, "password": PASSWORD},
@@ -48,6 +72,16 @@ def _login(client: TestClient, email: str) -> str:
 
 
 def _create_client(client: TestClient, token: str, email: str) -> dict:
+    """Handle create client.
+
+    Args:
+        client: Function argument.
+        token: Function argument.
+        email: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/auth/create-client",
         headers={"Authorization": f"Bearer {token}"},
@@ -65,6 +99,18 @@ def _create_track(
     kind: str,
     title: str,
 ) -> dict:
+    """Handle create track.
+
+    Args:
+        client: Function argument.
+        token: Function argument.
+        client_id: Function argument.
+        kind: Function argument.
+        title: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/portal/tracks",
         headers={"Authorization": f"Bearer {token}"},
@@ -75,6 +121,11 @@ def _create_track(
 
 
 def test_professional_lists_only_owned_clients(client: TestClient) -> None:
+    """Verify professional lists only owned clients.
+
+    Args:
+        client: Function argument.
+    """
     _signup(client, "one@example.com")
     one_token = _login(client, "one@example.com")
     owned = _create_client(client, one_token, "owned@example.com")
@@ -94,6 +145,11 @@ def test_professional_lists_only_owned_clients(client: TestClient) -> None:
 def test_fitness_journal_payload_is_encrypted_and_visible_to_client(
     client: TestClient,
 ) -> None:
+    """Verify fitness journal payload is encrypted and visible to client.
+
+    Args:
+        client: Function argument.
+    """
     _signup(client, "coach@example.com")
     professional_token = _login(client, "coach@example.com")
     candidate = _create_client(client, professional_token, "candidate@example.com")
@@ -150,6 +206,11 @@ def test_fitness_journal_payload_is_encrypted_and_visible_to_client(
 
 
 def test_laser_skin_checkin_supports_descriptive_tracking(client: TestClient) -> None:
+    """Verify laser skin checkin supports descriptive tracking.
+
+    Args:
+        client: Function argument.
+    """
     _signup(client, "provider@example.com")
     professional_token = _login(client, "provider@example.com")
     patient = _create_client(client, professional_token, "patient@example.com")
@@ -181,6 +242,11 @@ def test_laser_skin_checkin_supports_descriptive_tracking(client: TestClient) ->
 def test_foreign_professional_cannot_read_track_or_trigger_decryption(
     client: TestClient,
 ) -> None:
+    """Verify foreign professional cannot read track or trigger decryption.
+
+    Args:
+        client: Function argument.
+    """
     _signup(client, "owner@example.com")
     owner_token = _login(client, "owner@example.com")
     owned_client = _create_client(client, owner_token, "owned@example.com")
@@ -206,7 +272,13 @@ def test_foreign_professional_cannot_read_track_or_trigger_decryption(
     original_cipher = app.state.message_cipher
 
     class DecryptBomb:
+        """Represent DecryptBomb."""
         def decrypt(self, ciphertext: str) -> str:
+            """Handle decrypt.
+
+            Args:
+                ciphertext: Function argument.
+            """
             raise AssertionError("unauthorized portal access must not decrypt")
 
     app.state.message_cipher = DecryptBomb()

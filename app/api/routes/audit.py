@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 import csv
@@ -28,6 +29,14 @@ CSV_FIELDS = (
 
 
 def _normalize_datetime(value: datetime | None) -> datetime | None:
+    """Handle normalize datetime.
+
+    Args:
+        value: Function argument.
+
+    Returns:
+        Function result.
+    """
     if value is None:
         return None
     if value.tzinfo is None:
@@ -40,6 +49,16 @@ def _audit_query(
     start: datetime | None,
     end: datetime | None,
 ) -> dict[str, Any]:
+    """Handle audit query.
+
+    Args:
+        subject_user_id: Function argument.
+        start: Function argument.
+        end: Function argument.
+
+    Returns:
+        Function result.
+    """
     query: dict[str, Any] = {"subject_user_id": subject_user_id}
     timestamp_filter: dict[str, datetime] = {}
     if start is not None:
@@ -52,6 +71,12 @@ def _audit_query(
 
 
 def _validate_range(start: datetime | None, end: datetime | None) -> None:
+    """Handle validate range.
+
+    Args:
+        start: Function argument.
+        end: Function argument.
+    """
     if start is not None and end is not None and start > end:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -60,6 +85,14 @@ def _validate_range(start: datetime | None, end: datetime | None) -> None:
 
 
 def _serialize_event(event: dict[str, Any]) -> AuditEventResponse:
+    """Handle serialize event.
+
+    Args:
+        event: Function argument.
+
+    Returns:
+        Function result.
+    """
     return AuditEventResponse(
         id=str(event["_id"]),
         timestamp=event["timestamp"],
@@ -76,6 +109,14 @@ def _serialize_event(event: dict[str, Any]) -> AuditEventResponse:
 
 
 def _safe_csv_cell(value: Any) -> str:
+    """Handle safe csv cell.
+
+    Args:
+        value: Function argument.
+
+    Returns:
+        Function result.
+    """
     if value is None:
         return ""
     if isinstance(value, datetime):
@@ -113,6 +154,20 @@ def query_audit_events(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> list[AuditEventResponse]:
+    """Handle query audit events.
+
+    Args:
+        request: Function argument.
+        subject_user_id: Function argument.
+        start: Function argument.
+        end: Function argument.
+        limit: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     start = _normalize_datetime(start)
     end = _normalize_datetime(end)
     _validate_range(start, end)
@@ -163,6 +218,19 @@ def export_audit_events(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> Response:
+    """Handle export audit events.
+
+    Args:
+        request: Function argument.
+        subject_user_id: Function argument.
+        start: Function argument.
+        end: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     start = _normalize_datetime(start)
     end = _normalize_datetime(end)
     _validate_range(start, end)

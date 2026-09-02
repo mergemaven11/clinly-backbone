@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from datetime import datetime
@@ -7,6 +8,7 @@ from pydantic import BaseModel
 
 
 class AuditEventResponse(BaseModel):
+    """Represent AuditEventResponse."""
     id: str
     timestamp: datetime
     actor_user_id: str | None = None

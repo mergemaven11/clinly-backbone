@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -13,6 +14,11 @@ PASSWORD = "StrongPass123!"
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:
+    """Handle client.
+
+    Yields:
+        Values produced by the function.
+    """
     with TestClient(app) as test_client:
         database = app.state.mongo.db()
         for collection in ("users", "integration_connections", "audit_events"):
@@ -23,6 +29,15 @@ def client() -> Iterator[TestClient]:
 
 
 def _signup_provider(client: TestClient, email: str = "provider@example.com") -> dict:
+    """Handle signup provider.
+
+    Args:
+        client: Function argument.
+        email: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/auth/signup-provider",
         json={"email": email, "password": PASSWORD},
@@ -32,6 +47,15 @@ def _signup_provider(client: TestClient, email: str = "provider@example.com") ->
 
 
 def _login(client: TestClient, email: str) -> str:
+    """Handle login.
+
+    Args:
+        client: Function argument.
+        email: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/auth/login",
         json={"email": email, "password": PASSWORD},
@@ -43,6 +67,11 @@ def _login(client: TestClient, email: str) -> str:
 def test_provider_catalog_is_commercial_metadata_without_secrets(
     client: TestClient,
 ) -> None:
+    """Verify provider catalog is commercial metadata without secrets.
+
+    Args:
+        client: Function argument.
+    """
     _signup_provider(client)
     token = _login(client, "provider@example.com")
 
@@ -76,6 +105,11 @@ def test_provider_catalog_is_commercial_metadata_without_secrets(
 def test_connections_are_provider_scoped_and_never_return_credentials(
     client: TestClient,
 ) -> None:
+    """Verify connections are provider scoped and never return credentials.
+
+    Args:
+        client: Function argument.
+    """
     _signup_provider(client, "one@example.com")
     one_token = _login(client, "one@example.com")
     provider_two = _signup_provider(client, "two@example.com")
@@ -124,6 +158,11 @@ def test_connections_are_provider_scoped_and_never_return_credentials(
 def test_participant_cannot_access_provider_integration_surface(
     client: TestClient,
 ) -> None:
+    """Verify participant cannot access provider integration surface.
+
+    Args:
+        client: Function argument.
+    """
     _signup_provider(client)
     provider_token = _login(client, "provider@example.com")
     client.post(

@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from typing import Any
@@ -32,6 +33,16 @@ def integration_catalog(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> list[IntegrationDefinition]:
+    """Handle integration catalog.
+
+    Args:
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     require_provider(database, current_user=current_user, request=request)
     log_audit_event(
         database,
@@ -58,6 +69,16 @@ def integration_connections(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> list[IntegrationConnectionResponse]:
+    """Handle integration connections.
+
+    Args:
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     require_provider(database, current_user=current_user, request=request)
     records = database.integration_connections.find(
         {"provider_user_id": current_user["_id"]},

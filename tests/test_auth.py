@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -15,6 +16,11 @@ CLIENT_PASSWORD = "ClientPass123!"
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:
+    """Handle client.
+
+    Yields:
+        Values produced by the function.
+    """
     with TestClient(app) as test_client:
         database = app.state.mongo.db()
         database.users.delete_many({})
@@ -25,6 +31,14 @@ def client() -> Iterator[TestClient]:
 
 
 def _signup_therapist(client: TestClient) -> dict:
+    """Handle signup therapist.
+
+    Args:
+        client: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/auth/signup-therapist",
         json={"email": THERAPIST_EMAIL, "password": THERAPIST_PASSWORD},
@@ -34,6 +48,16 @@ def _signup_therapist(client: TestClient) -> dict:
 
 
 def _login(client: TestClient, email: str, password: str) -> str:
+    """Handle login.
+
+    Args:
+        client: Function argument.
+        email: Function argument.
+        password: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/auth/login",
         json={"email": email, "password": password},
@@ -46,6 +70,11 @@ def _login(client: TestClient, email: str, password: str) -> str:
 
 
 def test_therapist_signup_hashes_password_and_audits(client: TestClient) -> None:
+    """Verify therapist signup hashes password and audits.
+
+    Args:
+        client: Function argument.
+    """
     user = _signup_therapist(client)
 
     assert user["email"] == THERAPIST_EMAIL
@@ -66,6 +95,11 @@ def test_therapist_signup_hashes_password_and_audits(client: TestClient) -> None
 
 
 def test_duplicate_email_returns_conflict(client: TestClient) -> None:
+    """Verify duplicate email returns conflict.
+
+    Args:
+        client: Function argument.
+    """
     _signup_therapist(client)
 
     response = client.post(
@@ -77,6 +111,11 @@ def test_duplicate_email_returns_conflict(client: TestClient) -> None:
 
 
 def test_login_returns_jwt_and_protected_me(client: TestClient) -> None:
+    """Verify login returns jwt and protected me.
+
+    Args:
+        client: Function argument.
+    """
     user = _signup_therapist(client)
     token = _login(client, THERAPIST_EMAIL, THERAPIST_PASSWORD)
 
@@ -93,6 +132,11 @@ def test_login_returns_jwt_and_protected_me(client: TestClient) -> None:
 
 
 def test_invalid_login_is_denied_and_audited(client: TestClient) -> None:
+    """Verify invalid login is denied and audited.
+
+    Args:
+        client: Function argument.
+    """
     _signup_therapist(client)
 
     response = client.post(
@@ -109,6 +153,11 @@ def test_invalid_login_is_denied_and_audited(client: TestClient) -> None:
 
 
 def test_disabled_user_cannot_login(client: TestClient) -> None:
+    """Verify disabled user cannot login.
+
+    Args:
+        client: Function argument.
+    """
     _signup_therapist(client)
     database = app.state.mongo.db()
     database.users.update_one(
@@ -129,6 +178,11 @@ def test_disabled_user_cannot_login(client: TestClient) -> None:
 
 
 def test_therapist_creates_owned_client(client: TestClient) -> None:
+    """Verify therapist creates owned client.
+
+    Args:
+        client: Function argument.
+    """
     therapist = _signup_therapist(client)
     therapist_token = _login(client, THERAPIST_EMAIL, THERAPIST_PASSWORD)
 
@@ -151,6 +205,11 @@ def test_therapist_creates_owned_client(client: TestClient) -> None:
 
 
 def test_client_cannot_create_another_client(client: TestClient) -> None:
+    """Verify client cannot create another client.
+
+    Args:
+        client: Function argument.
+    """
     _signup_therapist(client)
     therapist_token = _login(client, THERAPIST_EMAIL, THERAPIST_PASSWORD)
 

@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -20,6 +21,15 @@ def _serialize_message(
     *,
     cipher: MessageCipher,
 ) -> MessageResponse:
+    """Handle serialize message.
+
+    Args:
+        message: Function argument.
+        cipher: Function argument.
+
+    Returns:
+        Function result.
+    """
     return MessageResponse(
         id=str(message["_id"]),
         conversation_id=str(message["conversation_id"]),
@@ -46,6 +56,17 @@ def send_message(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> MessageResponse:
+    """Handle send message.
+
+    Args:
+        payload: Function argument.
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     conversation = authorize_conversation_access(
         database,
         conversation_id=payload.conversation_id,
@@ -98,6 +119,18 @@ def list_messages(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> list[MessageResponse]:
+    """Handle list messages.
+
+    Args:
+        request: Function argument.
+        conversation_id: Function argument.
+        limit: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     conversation = authorize_conversation_access(
         database,
         conversation_id=conversation_id,

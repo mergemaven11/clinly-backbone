@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 import logging
@@ -20,6 +21,14 @@ class MongoConnector:
         connect_timeout_ms: int = 3000,
         server_selection_timeout_ms: int = 3000,
     ) -> None:
+        """Initialize the instance.
+
+        Args:
+            uri: Function argument.
+            db_name: Function argument.
+            connect_timeout_ms: Function argument.
+            server_selection_timeout_ms: Function argument.
+        """
         self._uri = uri
         self._db_name = db_name
         self._connect_timeout_ms = connect_timeout_ms

@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from enum import StrEnum
@@ -10,22 +11,33 @@ BCRYPT_MAX_PASSWORD_BYTES = 72
 class UserRole(StrEnum):
     # Legacy storage values retained for V1 data/API compatibility. V2 exposes
     # provider/participant endpoint vocabulary without rewriting stored roles.
+    """Represent UserRole."""
     THERAPIST = "THERAPIST"
     CLIENT = "CLIENT"
 
 
 class PlatformRole(StrEnum):
+    """Represent PlatformRole."""
     PROVIDER = "PROVIDER"
     PARTICIPANT = "PARTICIPANT"
 
 
 class Credentials(BaseModel):
+    """Represent Credentials."""
     email: str = Field(min_length=3, max_length=320)
     password: str = Field(min_length=8, max_length=128)
 
     @field_validator("email")
     @classmethod
     def normalize_email(cls, value: str) -> str:
+        """Handle normalize email.
+
+        Args:
+            value: Function argument.
+
+        Returns:
+            Function result.
+        """
         normalized = value.strip().lower()
         if "@" not in normalized or normalized.startswith("@") or normalized.endswith("@"):
             raise ValueError("invalid email address")
@@ -34,16 +46,26 @@ class Credentials(BaseModel):
     @field_validator("password")
     @classmethod
     def validate_bcrypt_password_length(cls, value: str) -> str:
+        """Handle validate bcrypt password length.
+
+        Args:
+            value: Function argument.
+
+        Returns:
+            Function result.
+        """
         if len(value.encode("utf-8")) > BCRYPT_MAX_PASSWORD_BYTES:
             raise ValueError("password must be at most 72 UTF-8 bytes")
         return value
 
 
 class ProviderSignup(Credentials):
+    """Represent ProviderSignup."""
     pass
 
 
 class ParticipantCreate(Credentials):
+    """Represent ParticipantCreate."""
     pass
 
 
@@ -56,10 +78,12 @@ class ClientCreate(ParticipantCreate):
 
 
 class LoginRequest(Credentials):
+    """Represent LoginRequest."""
     pass
 
 
 class UserResponse(BaseModel):
+    """Represent UserResponse."""
     id: str
     email: str
     role: UserRole
@@ -68,6 +92,7 @@ class UserResponse(BaseModel):
 
 
 class PlatformUserResponse(BaseModel):
+    """Represent PlatformUserResponse."""
     id: str
     email: str
     role: PlatformRole
@@ -76,6 +101,7 @@ class PlatformUserResponse(BaseModel):
 
 
 class TokenResponse(BaseModel):
+    """Represent TokenResponse."""
     access_token: str
     token_type: str = "bearer"
     expires_in: int

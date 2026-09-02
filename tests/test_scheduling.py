@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -18,6 +19,11 @@ PROVIDER_TZ = ZoneInfo("America/New_York")
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:
+    """Handle client.
+
+    Yields:
+        Values produced by the function.
+    """
     with TestClient(app) as test_client:
         database = app.state.mongo.db()
         collections = (
@@ -37,6 +43,15 @@ def client() -> Iterator[TestClient]:
 
 
 def _signup_provider(client: TestClient, email: str) -> dict:
+    """Handle signup provider.
+
+    Args:
+        client: Function argument.
+        email: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/auth/signup-provider",
         json={"email": email, "password": PASSWORD},
@@ -46,6 +61,15 @@ def _signup_provider(client: TestClient, email: str) -> dict:
 
 
 def _login(client: TestClient, email: str) -> str:
+    """Handle login.
+
+    Args:
+        client: Function argument.
+        email: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/auth/login",
         json={"email": email, "password": PASSWORD},
@@ -55,10 +79,26 @@ def _login(client: TestClient, email: str) -> str:
 
 
 def _auth(token: str) -> dict[str, str]:
+    """Handle auth.
+
+    Args:
+        token: Function argument.
+
+    Returns:
+        Function result.
+    """
     return {"Authorization": f"Bearer {token}"}
 
 
 def _future_local_day(days: int = 3):
+    """Handle future local day.
+
+    Args:
+        days: Function argument.
+
+    Returns:
+        Function result.
+    """
     return datetime.now(PROVIDER_TZ).date() + timedelta(days=days)
 
 
@@ -70,6 +110,18 @@ def _create_provider_profile(
     slug: str = "schedule-provider",
     public: bool = True,
 ) -> dict:
+    """Handle create provider profile.
+
+    Args:
+        client: Function argument.
+        token: Function argument.
+        display_name: Function argument.
+        slug: Function argument.
+        public: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.put(
         "/provider/profile",
         headers=_auth(token),
@@ -93,6 +145,18 @@ def _create_service(
     duration: int = 60,
     public: bool = True,
 ) -> dict:
+    """Handle create service.
+
+    Args:
+        client: Function argument.
+        token: Function argument.
+        name: Function argument.
+        duration: Function argument.
+        public: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/provider/services",
         headers=_auth(token),
@@ -120,6 +184,19 @@ def _put_schedule(
     exceptions: list[dict] | None = None,
     policy: dict | None = None,
 ) -> dict:
+    """Handle put schedule.
+
+    Args:
+        client: Function argument.
+        token: Function argument.
+        target_day: Function argument.
+        service_id: Function argument.
+        exceptions: Function argument.
+        policy: Function argument.
+
+    Returns:
+        Function result.
+    """
     schedule_policy = {
         "slot_interval_minutes": 60,
         "minimum_notice_minutes": 0,
@@ -153,6 +230,16 @@ def _put_schedule(
 
 
 def _create_participant(client: TestClient, provider_token: str, email: str) -> dict:
+    """Handle create participant.
+
+    Args:
+        client: Function argument.
+        provider_token: Function argument.
+        email: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/auth/create-participant",
         headers=_auth(provider_token),
@@ -163,6 +250,17 @@ def _create_participant(client: TestClient, provider_token: str, email: str) -> 
 
 
 def _public_slots(client: TestClient, slug: str, service_id: str, target_day) -> list[dict]:
+    """Handle public slots.
+
+    Args:
+        client: Function argument.
+        slug: Function argument.
+        service_id: Function argument.
+        target_day: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.get(
         f"/public/providers/{slug}/services/{service_id}/slots",
         params={"date_from": target_day.isoformat(), "date_to": target_day.isoformat()},
@@ -174,6 +272,11 @@ def _public_slots(client: TestClient, slug: str, service_id: str, target_day) ->
 def test_public_slots_follow_provider_timezone_service_duration_and_exception(
     client: TestClient,
 ) -> None:
+    """Verify public slots follow provider timezone service duration and exception.
+
+    Args:
+        client: Function argument.
+    """
     _signup_provider(client, "provider@example.com")
     token = _login(client, "provider@example.com")
     _create_provider_profile(client, token)
@@ -212,6 +315,11 @@ def test_public_slots_follow_provider_timezone_service_duration_and_exception(
 
 
 def test_public_slots_hide_private_service(client: TestClient) -> None:
+    """Verify public slots hide private service.
+
+    Args:
+        client: Function argument.
+    """
     _signup_provider(client, "provider@example.com")
     token = _login(client, "provider@example.com")
     _create_provider_profile(client, token)
@@ -229,6 +337,11 @@ def test_public_slots_hide_private_service(client: TestClient) -> None:
 def test_atomic_provider_day_reservation_rejects_overlapping_interval(
     client: TestClient,
 ) -> None:
+    """Verify atomic provider day reservation rejects overlapping interval.
+
+    Args:
+        client: Function argument.
+    """
     database = app.state.mongo.db()
     provider_id = ObjectId()
     participant_one = ObjectId()
@@ -277,6 +390,11 @@ def test_atomic_provider_day_reservation_rejects_overlapping_interval(
 
 
 def test_participant_booking_reschedule_cancel_releases_slots(client: TestClient) -> None:
+    """Verify participant booking reschedule cancel releases slots.
+
+    Args:
+        client: Function argument.
+    """
     _signup_provider(client, "provider@example.com")
     provider_token = _login(client, "provider@example.com")
     _create_provider_profile(client, provider_token)
@@ -336,6 +454,11 @@ def test_participant_booking_reschedule_cancel_releases_slots(client: TestClient
 
 
 def test_second_participant_cannot_claim_reserved_slot(client: TestClient) -> None:
+    """Verify second participant cannot claim reserved slot.
+
+    Args:
+        client: Function argument.
+    """
     _signup_provider(client, "provider@example.com")
     provider_token = _login(client, "provider@example.com")
     _create_provider_profile(client, provider_token)
@@ -366,6 +489,11 @@ def test_second_participant_cannot_claim_reserved_slot(client: TestClient) -> No
 def test_provider_can_book_owned_participant_but_not_foreign_participant(
     client: TestClient,
 ) -> None:
+    """Verify provider can book owned participant but not foreign participant.
+
+    Args:
+        client: Function argument.
+    """
     _signup_provider(client, "owner@example.com")
     owner_token = _login(client, "owner@example.com")
     _create_provider_profile(client, owner_token, slug="owner")
@@ -403,6 +531,11 @@ def test_provider_can_book_owned_participant_but_not_foreign_participant(
 
 
 def test_participant_cannot_access_foreign_provider_availability(client: TestClient) -> None:
+    """Verify participant cannot access foreign provider availability.
+
+    Args:
+        client: Function argument.
+    """
     _signup_provider(client, "one@example.com")
     one_token = _login(client, "one@example.com")
     _create_provider_profile(client, one_token, slug="one")
@@ -429,6 +562,11 @@ def test_participant_cannot_access_foreign_provider_availability(client: TestCli
 
 
 def test_participant_policy_can_disable_cancel_and_reschedule(client: TestClient) -> None:
+    """Verify participant policy can disable cancel and reschedule.
+
+    Args:
+        client: Function argument.
+    """
     _signup_provider(client, "provider@example.com")
     provider_token = _login(client, "provider@example.com")
     _create_provider_profile(client, provider_token)
@@ -467,6 +605,11 @@ def test_participant_policy_can_disable_cancel_and_reschedule(client: TestClient
 
 
 def test_schedule_rejects_foreign_service_reference(client: TestClient) -> None:
+    """Verify schedule rejects foreign service reference.
+
+    Args:
+        client: Function argument.
+    """
     _signup_provider(client, "one@example.com")
     one_token = _login(client, "one@example.com")
     _create_provider_profile(client, one_token, slug="one")

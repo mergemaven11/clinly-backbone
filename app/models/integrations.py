@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from datetime import datetime
@@ -7,6 +8,7 @@ from pydantic import BaseModel, Field
 
 
 class IntegrationCategory(StrEnum):
+    """Represent IntegrationCategory."""
     CALENDAR = "CALENDAR"
     VIDEO = "VIDEO"
     PAYMENTS = "PAYMENTS"
@@ -16,18 +18,21 @@ class IntegrationCategory(StrEnum):
 
 
 class IntegrationAvailability(StrEnum):
+    """Represent IntegrationAvailability."""
     PLANNED = "PLANNED"
     BETA = "BETA"
     AVAILABLE = "AVAILABLE"
 
 
 class IntegrationEntitlement(StrEnum):
+    """Represent IntegrationEntitlement."""
     INCLUDED = "INCLUDED"
     PLAN_GATED = "PLAN_GATED"
     PAID_ADDON = "PAID_ADDON"
 
 
 class IntegrationSetupType(StrEnum):
+    """Represent IntegrationSetupType."""
     OAUTH2_PKCE = "OAUTH2_PKCE"
     OAUTH2 = "OAUTH2"
     MANAGED = "MANAGED"
@@ -35,6 +40,7 @@ class IntegrationSetupType(StrEnum):
 
 
 class IntegrationConnectionState(StrEnum):
+    """Represent IntegrationConnectionState."""
     AVAILABLE = "AVAILABLE"
     CONNECTING = "CONNECTING"
     CONNECTED = "CONNECTED"
@@ -44,6 +50,7 @@ class IntegrationConnectionState(StrEnum):
 
 
 class IntegrationDefinition(BaseModel):
+    """Represent IntegrationDefinition."""
     key: str = Field(min_length=2, max_length=64, pattern=r"^[a-z0-9_]+$")
     display_name: str = Field(min_length=2, max_length=100)
     category: IntegrationCategory
@@ -55,6 +62,7 @@ class IntegrationDefinition(BaseModel):
 
 
 class IntegrationConnectionResponse(BaseModel):
+    """Represent IntegrationConnectionResponse."""
     integration_key: str
     state: IntegrationConnectionState
     connected_at: datetime | None = None

@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from functools import lru_cache
@@ -47,15 +48,36 @@ class Settings(BaseSettings):
     @field_validator("log_level", mode="before")
     @classmethod
     def normalize_log_level(cls, value: str) -> str:
+        """Handle normalize log level.
+
+        Args:
+            value: Function argument.
+
+        Returns:
+            Function result.
+        """
         return value.upper() if isinstance(value, str) else value
 
     @field_validator("cors_allowed_origins")
     @classmethod
     def normalize_origins(cls, value: list[str]) -> list[str]:
+        """Handle normalize origins.
+
+        Args:
+            value: Function argument.
+
+        Returns:
+            Function result.
+        """
         return [origin.rstrip("/") for origin in value if origin.strip()]
 
     @model_validator(mode="after")
     def enforce_production_security(self) -> "Settings":
+        """Handle enforce production security.
+
+        Returns:
+            Function result.
+        """
         if self.app_env != "prod":
             return self
 

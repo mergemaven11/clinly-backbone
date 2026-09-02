@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -12,6 +13,11 @@ PASSWORD = "StrongPass123!"
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:
+    """Handle client.
+
+    Yields:
+        Values produced by the function.
+    """
     with TestClient(app) as test_client:
         database = app.state.mongo.db()
         for collection in ("users", "audit_events"):
@@ -22,6 +28,15 @@ def client() -> Iterator[TestClient]:
 
 
 def _login(client: TestClient, email: str) -> str:
+    """Handle login.
+
+    Args:
+        client: Function argument.
+        email: Function argument.
+
+    Returns:
+        Function result.
+    """
     response = client.post(
         "/auth/login",
         json={"email": email, "password": PASSWORD},
@@ -31,6 +46,11 @@ def _login(client: TestClient, email: str) -> str:
 
 
 def test_v2_provider_contract_preserves_legacy_storage(client: TestClient) -> None:
+    """Verify v2 provider contract preserves legacy storage.
+
+    Args:
+        client: Function argument.
+    """
     created = client.post(
         "/auth/signup-provider",
         json={"email": "provider@example.com", "password": PASSWORD},
@@ -63,6 +83,11 @@ def test_v2_provider_contract_preserves_legacy_storage(client: TestClient) -> No
 def test_provider_creates_and_lists_participant_with_v2_contract(
     client: TestClient,
 ) -> None:
+    """Verify provider creates and lists participant with v2 contract.
+
+    Args:
+        client: Function argument.
+    """
     provider = client.post(
         "/auth/signup-provider",
         json={"email": "provider@example.com", "password": PASSWORD},
@@ -98,6 +123,11 @@ def test_provider_creates_and_lists_participant_with_v2_contract(
 
 
 def test_participant_cannot_create_or_list_other_participants(client: TestClient) -> None:
+    """Verify participant cannot create or list other participants.
+
+    Args:
+        client: Function argument.
+    """
     client.post(
         "/auth/signup-provider",
         json={"email": "provider@example.com", "password": PASSWORD},

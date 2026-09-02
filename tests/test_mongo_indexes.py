@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 import os
@@ -33,6 +34,11 @@ def mongo_connector() -> MongoConnector:
 
 
 def test_init_indexes_is_idempotent(mongo_connector: MongoConnector) -> None:
+    """Verify init indexes is idempotent.
+
+    Args:
+        mongo_connector: Function argument.
+    """
     mongo_connector.init_indexes()
     mongo_connector.init_indexes()
 
@@ -105,6 +111,11 @@ def test_init_indexes_is_idempotent(mongo_connector: MongoConnector) -> None:
 
 
 def test_duplicate_email_is_rejected(mongo_connector: MongoConnector) -> None:
+    """Verify duplicate email is rejected.
+
+    Args:
+        mongo_connector: Function argument.
+    """
     mongo_connector.init_indexes()
     users = mongo_connector.db().users
 
@@ -129,6 +140,11 @@ def test_duplicate_email_is_rejected(mongo_connector: MongoConnector) -> None:
 def test_provider_can_have_only_one_connection_per_integration(
     mongo_connector: MongoConnector,
 ) -> None:
+    """Verify provider can have only one connection per integration.
+
+    Args:
+        mongo_connector: Function argument.
+    """
     mongo_connector.init_indexes()
     connections = mongo_connector.db().integration_connections
     provider_id = ObjectId()
@@ -153,6 +169,11 @@ def test_provider_can_have_only_one_connection_per_integration(
 def test_provider_profile_slug_and_owner_are_unique(
     mongo_connector: MongoConnector,
 ) -> None:
+    """Verify provider profile slug and owner are unique.
+
+    Args:
+        mongo_connector: Function argument.
+    """
     mongo_connector.init_indexes()
     profiles = mongo_connector.db().provider_profiles
     first_provider = ObjectId()
@@ -186,6 +207,11 @@ def test_provider_profile_slug_and_owner_are_unique(
 def test_provider_has_one_schedule_and_one_atomic_calendar_per_day(
     mongo_connector: MongoConnector,
 ) -> None:
+    """Verify provider has one schedule and one atomic calendar per day.
+
+    Args:
+        mongo_connector: Function argument.
+    """
     mongo_connector.init_indexes()
     database = mongo_connector.db()
     provider_id = ObjectId()

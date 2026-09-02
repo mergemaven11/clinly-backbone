@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from typing import Any
@@ -21,6 +22,14 @@ router = APIRouter(tags=["providers"])
 
 
 def _serialize_platform_user(user: dict[str, Any]) -> PlatformUserResponse:
+    """Handle serialize platform user.
+
+    Args:
+        user: Function argument.
+
+    Returns:
+        Function result.
+    """
     provider_id = user.get("therapist_id")
     return PlatformUserResponse(
         id=str(user["_id"]),
@@ -83,6 +92,14 @@ def signup_provider(
 def platform_me(
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> PlatformUserResponse:
+    """Handle platform me.
+
+    Args:
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     return _serialize_platform_user(current_user)
 
 
@@ -104,6 +121,17 @@ def create_participant(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> PlatformUserResponse:
+    """Handle create participant.
+
+    Args:
+        payload: Function argument.
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     require_provider(database, current_user=current_user, request=request)
     participant = _insert_user(
         database,
@@ -140,6 +168,16 @@ def list_participants(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> list[PlatformUserResponse]:
+    """Handle list participants.
+
+    Args:
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     require_provider(database, current_user=current_user, request=request)
     participants = list(
         database.users.find(

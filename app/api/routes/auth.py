@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -26,6 +27,14 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 def _serialize_user(user: dict[str, Any]) -> UserResponse:
+    """Handle serialize user.
+
+    Args:
+        user: Function argument.
+
+    Returns:
+        Function result.
+    """
     therapist_id = user.get("therapist_id")
     return UserResponse(
         id=str(user["_id"]),
@@ -44,6 +53,18 @@ def _insert_user(
     role: UserRole,
     therapist_id: ObjectId | None = None,
 ) -> dict[str, Any]:
+    """Handle insert user.
+
+    Args:
+        database: Function argument.
+        email: Function argument.
+        password: Function argument.
+        role: Function argument.
+        therapist_id: Function argument.
+
+    Returns:
+        Function result.
+    """
     document: dict[str, Any] = {
         "email": email,
         "password_hash": hash_password(password),
@@ -65,6 +86,14 @@ def _insert_user(
 
 
 def _client_ip(request: Request) -> str:
+    """Handle client ip.
+
+    Args:
+        request: Function argument.
+
+    Returns:
+        Function result.
+    """
     if request.client is None:
         return "unknown"
     return request.client.host
@@ -85,6 +114,16 @@ def signup_therapist(
     request: Request,
     database: Database = Depends(get_database),
 ) -> UserResponse:
+    """Handle signup therapist.
+
+    Args:
+        payload: Function argument.
+        request: Function argument.
+        database: Function argument.
+
+    Returns:
+        Function result.
+    """
     user = _insert_user(
         database,
         email=payload.email,
@@ -121,6 +160,16 @@ def login(
     request: Request,
     database: Database = Depends(get_database),
 ) -> TokenResponse:
+    """Handle login.
+
+    Args:
+        payload: Function argument.
+        request: Function argument.
+        database: Function argument.
+
+    Returns:
+        Function result.
+    """
     limiter: LoginRateLimiter = request.app.state.login_rate_limiter
     ip_address = _client_ip(request)
     decision = limiter.check(email=payload.email, ip_address=ip_address)
@@ -203,6 +252,14 @@ def login(
     },
 )
 def me(current_user: dict[str, Any] = Depends(get_current_user)) -> UserResponse:
+    """Handle me.
+
+    Args:
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     return _serialize_user(current_user)
 
 
@@ -224,6 +281,17 @@ def create_client(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> UserResponse:
+    """Handle create client.
+
+    Args:
+        payload: Function argument.
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     actor_id = str(current_user["_id"])
     if current_user["role"] != UserRole.THERAPIST.value:
         log_audit_event(

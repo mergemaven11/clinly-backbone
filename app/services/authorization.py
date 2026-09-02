@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from typing import Any, NoReturn
@@ -16,10 +17,26 @@ _PARTICIPANT_ROLE_VALUES = {UserRole.CLIENT.value, "PARTICIPANT"}
 
 
 def is_provider_role(role: str | None) -> bool:
+    """Handle is provider role.
+
+    Args:
+        role: Function argument.
+
+    Returns:
+        Function result.
+    """
     return role in _PROVIDER_ROLE_VALUES
 
 
 def is_participant_role(role: str | None) -> bool:
+    """Handle is participant role.
+
+    Args:
+        role: Function argument.
+
+    Returns:
+        Function result.
+    """
     return role in _PARTICIPANT_ROLE_VALUES
 
 

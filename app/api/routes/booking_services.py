@@ -1,3 +1,4 @@
+"""Document this first-party Python module."""
 from __future__ import annotations
 
 from typing import Any
@@ -18,6 +19,15 @@ def _serialize_bookable_service(
     *,
     provider_display_name: str | None,
 ) -> BookableServiceResponse:
+    """Handle serialize bookable service.
+
+    Args:
+        service: Function argument.
+        provider_display_name: Function argument.
+
+    Returns:
+        Function result.
+    """
     return BookableServiceResponse(
         id=str(service["_id"]),
         name=service["name"],
@@ -48,6 +58,16 @@ def list_bookable_services(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> list[BookableServiceResponse]:
+    """Handle list bookable services.
+
+    Args:
+        request: Function argument.
+        database: Function argument.
+        current_user: Function argument.
+
+    Returns:
+        Function result.
+    """
     role = current_user.get("role")
     if is_provider_role(role):
         provider_user_id = current_user["_id"]
