@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 
 import App from './AppV3.jsx'
 import DocsPage from './DocsPage.jsx'
-import { SESSION_TOKEN_KEY } from './brand'
+import { SESSION_TOKEN_KEY, clearSessionToken } from './brand'
 import { DEMO_PATIENT_TOKEN, DEMO_PROVIDER_TOKEN, IS_DEMO_MODE } from './demoApi'
 import './styles.css'
 import './platform-v3.css'
@@ -14,7 +14,7 @@ const isDemoHome = /^\/demo\/?$/.test(window.location.pathname)
 const demoMatch = window.location.pathname.match(/^\/demo\/(provider|patient)\/?$/)
 
 if (IS_DEMO_MODE && isDemoHome) {
-  sessionStorage.removeItem(SESSION_TOKEN_KEY)
+  clearSessionToken()
 }
 
 if (IS_DEMO_MODE && demoMatch) {
