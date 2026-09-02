@@ -32,10 +32,15 @@
   display: grid;
   gap: 10px;
   margin-bottom: 18px;
-  padding: 15px;
+  padding: 15px 18px 15px 15px;
   border: 1px solid #d9e8e6;
   border-radius: 15px;
   background: linear-gradient(135deg, #f7fcfb, #fbf9ff);
+}
+
+.specialty-preview-control,
+.specialty-preview-control * {
+  box-sizing: border-box;
 }
 
 .specialty-preview-heading {
@@ -47,6 +52,7 @@
 
 .specialty-preview-heading > div {
   display: grid;
+  min-width: 0;
   gap: 2px;
 }
 
@@ -61,6 +67,7 @@
 }
 
 .specialty-workspace-name {
+  flex: 0 0 auto;
   padding: 5px 9px;
   border-radius: 999px;
   background: #e8f5f2;
@@ -72,14 +79,18 @@
 
 .specialty-combobox {
   position: relative;
+  width: 100%;
+  min-width: 0;
 }
 
 .specialty-preview-control label {
   display: block;
+  width: 100%;
 }
 
 .specialty-preview-control input {
   width: 100%;
+  max-width: 100%;
   background: #fff;
   border-color: #cfe1df;
 }
@@ -147,6 +158,44 @@
   padding: 12px;
   color: #71808d;
   font-size: 11px;
+}
+
+.specialty-selector-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.specialty-general-button {
+  padding: 8px 11px;
+  border: 1px solid #c9e3df;
+  border-radius: 10px;
+  background: #eff8f6;
+  color: #147d73;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.specialty-general-button:hover,
+.specialty-general-button:focus-visible {
+  background: #e4f3f0;
+  outline: 2px solid rgba(20, 125, 115, .18);
+  outline-offset: 2px;
+}
+
+.specialty-selector-actions a {
+  color: #147d73;
+  font-size: 10px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.specialty-selector-actions a:hover,
+.specialty-selector-actions a:focus-visible {
+  text-decoration: underline;
 }
 
 .specialty-preview-control > small {
@@ -327,7 +376,7 @@
   }
 
   .specialty-preview-control {
-    padding: 13px;
+    padding: 13px 16px 13px 13px;
   }
 
   .specialty-preview-heading {
@@ -337,6 +386,20 @@
 
   .specialty-workspace-name {
     white-space: normal;
+  }
+
+  .specialty-selector-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .specialty-general-button,
+  .specialty-selector-actions a {
+    width: 100%;
+  }
+
+  .specialty-selector-actions a {
+    padding: 2px 0;
   }
 }
 

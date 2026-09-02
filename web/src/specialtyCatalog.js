@@ -96,7 +96,7 @@ export function familyForSpecialty(specialtyKey) {
 export function matchesSpecialty(item, query = '') {
   const normalized = query.trim().toLowerCase()
   if (!normalized) return true
-  return [item.label, ...(item.aliases || [])].some((value) => value.toLowerCase().includes(normalized))
+  return item.label.toLowerCase().startsWith(normalized)
 }
 
 export function templatePlansForSpecialty(specialtyKey) {

@@ -11,6 +11,7 @@ import {
 } from './specialtyCatalog'
 
 const DEMO_SPECIALTY_KEY = 'clinly-demo-specialty-v1'
+const SPECIALTY_DIRECTORY_URL = 'https://github.com/mergemaven11/clinly-backbone/blob/main/docs/SPECIALTY_PROVIDERS.md'
 
 function Empty({ title, detail }) {
   return <div className="empty"><span className="empty-icon">○</span><strong>{title}</strong><p>{detail}</p></div>
@@ -45,15 +46,28 @@ function TrackCard({ track, specialty, selected = false, onClick }) {
 function SpecialtySelector({ value, onChange }) {
   const specialty = specialtyForKey(value)
   const family = familyForSpecialty(value)
+  const generalProvider = specialtyForKey('GENERAL_SERVICE_PROVIDER')
   const [query, setQuery] = useState(specialty.label)
   const [open, setOpen] = useState(false)
 
   useEffect(() => setQuery(specialtyForKey(value).label), [value])
 
-  const matches = useMemo(
-    () => SPECIALTIES.filter((item) => matchesSpecialty(item, query)).slice(0, 8),
-    [query],
-  )
+  const matches = useMemo(() => {
+    const normalized = query.trim().toLowerCase()
+    if (!normalized) return SPECIALTIES.slice(0, 24)
+
+    return SPECIALTIES
+      .filter((item) => matchesSpecialty(item, query) && item.key !== 'GENERAL_SERVICE_PROVIDER')
+      .sort((a, b) => {
+        const aValues = [a.label, ...(a.aliases || [])].map((entry) => entry.toLowerCase())
+        const bValues = [b.label, ...(b.aliases || [])].map((entry) => entry.toLowerCase())
+        const aStarts = aValues.some((entry) => entry.startsWith(normalized))
+        const bStarts = bValues.some((entry) => entry.startsWith(normalized))
+        if (aStarts !== bStarts) return aStarts ? -1 : 1
+        return a.label.localeCompare(b.label)
+      })
+      .slice(0, 24)
+  }, [query])
 
   function select(item) {
     setQuery(item.label)
@@ -66,7 +80,7 @@ function SpecialtySelector({ value, onChange }) {
     setQuery(nextQuery)
     setOpen(true)
     const normalized = nextQuery.trim().toLowerCase()
-    const exact = SPECIALTIES.find((item) => [item.label, ...(item.aliases || [])].some((value) => value.toLowerCase() === normalized))
+    const exact = SPECIALTIES.find((item) => [item.label, ...(item.aliases || [])].some((entry) => entry.toLowerCase() === normalized))
     if (exact) select(exact)
   }
 
@@ -97,7 +111,7 @@ function SpecialtySelector({ value, onChange }) {
             value={query}
             onChange={handleChange}
             onFocus={() => setOpen(true)}
-            onBlur={() => window.setTimeout(() => setOpen(false), 140)}
+            onBlur={() => window.setTimeout(() => setOpen(false), 180)}
             onKeyDown={handleKeyDown}
             placeholder="Search specialties…"
             aria-label="Search specialties"
@@ -114,12 +128,18 @@ function SpecialtySelector({ value, onChange }) {
                 <span>Use template</span>
               </button>
             )) : (
-              <div className="specialty-no-results">No matching specialty yet. Try a broader term.</div>
+              <div className="specialty-no-results">No matching specialty yet. Use the general provider workspace below.</div>
             )}
           </div>
         )}
       </div>
-      <small>Start typing a profession, then choose a result. The visible plans, terminology, and progress template change immediately.</small>
+      <div className="specialty-selector-actions">
+        <button className="specialty-general-button" type="button" onClick={() => select(generalProvider)}>
+          General – Provider
+        </button>
+        <a href={SPECIALTY_DIRECTORY_URL} target="_blank" rel="noreferrer">Browse all provider types</a>
+      </div>
+      <small>Start typing a profession. Matching providers populate immediately, with names that start with your text shown first.</small>
     </div>
   )
 }
