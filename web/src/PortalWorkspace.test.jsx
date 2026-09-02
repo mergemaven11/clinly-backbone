@@ -39,11 +39,11 @@ describe('PortalWorkspace specialty selector', () => {
 
     const listbox = screen.getByRole('listbox')
     const options = within(listbox).getAllByRole('option')
-    const labels = options.map((option) => within(option).getByRole('strong', { hidden: true }).textContent)
+    const labels = options.map((option) => option.querySelector('strong')?.textContent || '')
 
     expect(screen.getByText('Acne Specialist')).toBeInTheDocument()
     expect(screen.getByText('Academic Coach')).toBeInTheDocument()
-    expect(labels.findIndex((label) => label.startsWith('A'))).toBe(0)
+    expect(labels[0].startsWith('A')).toBe(true)
   })
 
   it('offers a General – Provider fallback that switches to the neutral client-plan template', () => {
