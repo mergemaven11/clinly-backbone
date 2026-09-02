@@ -6,51 +6,15 @@ import { familyForSpecialty, specialtyForKey, specialtyFromProviderType, templat
 const DEMO_SPECIALTY_KEY = 'clinly-demo-specialty-v1'
 
 const FAMILY_OVERVIEW = {
-  AESTHETICS: {
-    section: 'Treatment journeys',
-    extras: ['Aftercare & response', 'Client treatment preferences'],
-    descriptions: ['Follow treatment areas, sessions, response, and next steps.', 'Keep aftercare guidance and treatment response easy to review.', 'Remember treatment areas, sensitivities, settings, and preferences.'],
-  },
-  BEAUTY: {
-    section: 'Client services',
-    extras: ['Rebooking & retention', 'Client preferences'],
-    descriptions: ['Keep service history and maintenance plans together.', 'See maintenance cadence, recommended return, and follow-up needs.', 'Remember styles, products, sensitivities, and service preferences.'],
-  },
-  REHAB: {
-    section: 'Care plans',
-    extras: ['Outcomes & measurements', 'Home program adherence'],
-    descriptions: ['Follow functional goals, sessions, and recovery milestones.', 'Keep measurements and functional outcomes in one progress view.', 'Track assigned home work, adherence, and follow-up needs.'],
-  },
-  FITNESS: {
-    section: 'Active programs',
-    extras: ['Check-ins & measurements', 'Performance milestones'],
-    descriptions: ['Keep training goals, programming, and progress connected.', 'Follow check-ins, measurements, consistency, and readiness.', 'Capture performance goals, tests, wins, and next targets.'],
-  },
-  WELLNESS: {
-    section: 'Wellness journeys',
-    extras: ['Habits & routines', 'Client check-ins'],
-    descriptions: ['Keep wellness goals, routines, and progress together.', 'Follow the routines and habits supporting each client goal.', 'Review client-reported progress and follow-up needs over time.'],
-  },
-  COACHING: {
-    section: 'Client goals',
-    extras: ['Actions & accountability', 'Milestones & reflections'],
-    descriptions: ['Keep goals, commitments, and coaching progress connected.', 'Track next actions, ownership, and accountability between sessions.', 'Capture milestones, reflections, decisions, and what comes next.'],
-  },
-  BODYWORK: {
-    section: 'Recovery journeys',
-    extras: ['Session history', 'Recovery check-ins'],
-    descriptions: ['Keep recovery goals, sessions, and client response together.', 'Review bodywork focus, session history, and recurring needs.', 'Follow recovery response, mobility, comfort, and next-session needs.'],
-  },
-  CONSULTING: {
-    section: 'Client engagements',
-    extras: ['Deliverables & decisions', 'Next actions & milestones'],
-    descriptions: ['Keep engagement goals, workstreams, and progress connected.', 'Capture deliverables, important decisions, and client context.', 'Track owners, next actions, deadlines, and engagement milestones.'],
-  },
-  CARE: {
-    section: 'Client plans',
-    extras: ['Check-ins & follow-up', 'Notes & resources'],
-    descriptions: ['Keep support goals, services, and progress connected.', 'Follow client check-ins, follow-up needs, and next steps.', 'Keep useful notes and shared resources attached to the client journey.'],
-  },
+  AESTHETICS: { section: 'Treatment journeys', extras: ['Aftercare & response', 'Client treatment preferences'], descriptions: ['Follow treatment areas, sessions, response, and next steps.', 'Keep aftercare guidance and treatment response easy to review.', 'Remember treatment areas, sensitivities, settings, and preferences.'] },
+  BEAUTY: { section: 'Client services', extras: ['Rebooking & retention', 'Client preferences'], descriptions: ['Keep service history and maintenance plans together.', 'See maintenance cadence, recommended return, and follow-up needs.', 'Remember styles, products, sensitivities, and service preferences.'] },
+  REHAB: { section: 'Care plans', extras: ['Outcomes & measurements', 'Home program adherence'], descriptions: ['Follow functional goals, sessions, and recovery milestones.', 'Keep measurements and functional outcomes in one progress view.', 'Track assigned home work, adherence, and follow-up needs.'] },
+  FITNESS: { section: 'Active programs', extras: ['Check-ins & measurements', 'Performance milestones'], descriptions: ['Keep training goals, programming, and progress connected.', 'Follow check-ins, measurements, consistency, and readiness.', 'Capture performance goals, tests, wins, and next targets.'] },
+  WELLNESS: { section: 'Wellness journeys', extras: ['Habits & routines', 'Client check-ins'], descriptions: ['Keep wellness goals, routines, and progress together.', 'Follow the routines and habits supporting each client goal.', 'Review client-reported progress and follow-up needs over time.'] },
+  COACHING: { section: 'Client goals', extras: ['Actions & accountability', 'Milestones & reflections'], descriptions: ['Keep goals, commitments, and coaching progress connected.', 'Track next actions, ownership, and accountability between sessions.', 'Capture milestones, reflections, decisions, and what comes next.'] },
+  BODYWORK: { section: 'Recovery journeys', extras: ['Session history', 'Recovery check-ins'], descriptions: ['Keep recovery goals, sessions, and client response together.', 'Review bodywork focus, session history, and recurring needs.', 'Follow recovery response, mobility, comfort, and next-session needs.'] },
+  CONSULTING: { section: 'Client engagements', extras: ['Deliverables & decisions', 'Next actions & milestones'], descriptions: ['Keep engagement goals, workstreams, and progress connected.', 'Capture deliverables, important decisions, and client context.', 'Track owners, next actions, deadlines, and engagement milestones.'] },
+  CARE: { section: 'Client plans', extras: ['Check-ins & follow-up', 'Notes & resources'], descriptions: ['Keep support goals, services, and progress connected.', 'Follow client check-ins, follow-up needs, and next steps.', 'Keep useful notes and shared resources attached to the client journey.'] },
 }
 
 function specialtyOverview(specialtyKey) {
@@ -58,11 +22,12 @@ function specialtyOverview(specialtyKey) {
   const family = familyForSpecialty(specialtyKey)
   const config = FAMILY_OVERVIEW[specialty.family] || FAMILY_OVERVIEW.CARE
   const samples = templatePlansForSpecialty(specialtyKey)
-  const titles = [...samples.slice(0, 2), ...config.extras].slice(0, 4)
+  const templateCards = specialty.overviewCards || specialty.workspaceTemplate?.overviewCards
+  const titles = templateCards?.length ? templateCards.slice(0, 4) : [...samples.slice(0, 2), ...config.extras].slice(0, 4)
   return {
     specialty,
     family,
-    section: config.section,
+    section: specialty.workspaceTemplate?.templateName || config.section,
     cards: titles.map((title, index) => ({
       title,
       eyebrow: index < 2 ? family.label : index === 2 ? 'Workflow' : 'Client context',
@@ -100,7 +65,7 @@ export default function Overview({ user, people, tracks, conversations, onOpenTr
 
   const cards = isProvider
     ? [
-        ['Clients', people.length, `People in your ${family.workspace.toLowerCase()}`],
+        [specialty.workspaceTemplate?.clientLabel === 'Patient' ? 'Patients' : 'Clients', people.length, `People in your ${family.workspace.toLowerCase()}`],
         [specialty.planPlural || 'Active plans', compatibleTracks.length, `${family.progress} spaces`],
         ['Conversations', conversations.length, 'Connected client message threads'],
       ]
@@ -112,7 +77,7 @@ export default function Overview({ user, people, tracks, conversations, onOpenTr
 
   const providerHero = IS_DEMO_MODE
     ? {
-        kicker: `${adaptive.family.label} workspace`,
+        kicker: specialty.workspaceTemplate?.templateName || `${adaptive.family.label} workspace`,
         title: `A workspace built for ${specialty.label.toLowerCase()} work.`,
         detail: `Keep ${family.progress.toLowerCase()}, client history, appointments, and conversations together without forcing your business into somebody else’s workflow.`,
       }
@@ -129,32 +94,17 @@ export default function Overview({ user, people, tracks, conversations, onOpenTr
           <span className="kicker">{isProvider ? providerHero.kicker : 'Private patient portal'}</span>
           <h2>{isProvider ? providerHero.title : 'Your plans, check-ins, and care conversation—all in one place.'}</h2>
           <p>{isProvider ? providerHero.detail : 'Review what your provider shared, record how things are going, and stay connected between appointments or sessions.'}</p>
-          {isProvider && (
-            <div className="hero-actions">
-              <button className="primary-button" type="button" onClick={onOpenIntegrations}>Explore integrations</button>
-            </div>
-          )}
+          {isProvider && <div className="hero-actions"><button className="primary-button" type="button" onClick={onOpenIntegrations}>Explore integrations</button></div>}
         </div>
         <div className="hero-orb">{APP_INITIAL}</div>
       </section>
 
       <section className="metric-grid">
-        {cards.map(([label, value, detail]) => (
-          <article className="metric-card" key={label}>
-            <span>{label}</span>
-            <strong>{value}</strong>
-            <small>{detail}</small>
-          </article>
-        ))}
+        {cards.map(([label, value, detail]) => <article className="metric-card" key={label}><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>)}
       </section>
 
       <section className="section-card">
-        <div className="section-heading">
-          <div>
-            <span className="kicker">{isProvider && IS_DEMO_MODE ? specialty.label : isProvider ? 'Recent spaces' : 'Shared with me'}</span>
-            <h3>{isProvider && IS_DEMO_MODE ? adaptive.section : isProvider ? 'Relationship tracks' : 'My plans & progress'}</h3>
-          </div>
-        </div>
+        <div className="section-heading"><div><span className="kicker">{isProvider && IS_DEMO_MODE ? specialty.label : isProvider ? 'Recent spaces' : 'Shared with me'}</span><h3>{isProvider && IS_DEMO_MODE ? adaptive.section : isProvider ? 'Relationship tracks' : 'My plans & progress'}</h3></div></div>
         {isProvider && IS_DEMO_MODE ? (
           <div className="track-grid">
             {adaptive.cards.map((display, index) => {
@@ -163,15 +113,9 @@ export default function Overview({ user, people, tracks, conversations, onOpenTr
             })}
           </div>
         ) : tracks.length ? (
-          <div className="track-grid">
-            {tracks.slice(0, 6).map((track) => <TrackCard key={track.id} track={track} onClick={() => onOpenTrack(track.id)} />)}
-          </div>
+          <div className="track-grid">{tracks.slice(0, 6).map((track) => <TrackCard key={track.id} track={track} onClick={() => onOpenTrack(track.id)} />)}</div>
         ) : (
-          <div className="empty">
-            <span className="empty-icon">○</span>
-            <strong>No plans yet</strong>
-            <p>{isProvider ? `Add a client, then start a ${String(specialty.planLabel || 'client plan').toLowerCase()}.` : 'No plan has been shared with you yet.'}</p>
-          </div>
+          <div className="empty"><span className="empty-icon">○</span><strong>No plans yet</strong><p>{isProvider ? `Add a client, then start a ${String(specialty.planLabel || 'client plan').toLowerCase()}.` : 'No plan has been shared with you yet.'}</p></div>
         )}
       </section>
     </div>
