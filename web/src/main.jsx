@@ -10,7 +10,12 @@ import './platform-v3.css'
 import './business-layout-v2.css'
 
 const isDocsRoute = /^\/docs\/?$/.test(window.location.pathname)
+const isDemoHome = /^\/demo\/?$/.test(window.location.pathname)
 const demoMatch = window.location.pathname.match(/^\/demo\/(provider|patient)\/?$/)
+
+if (IS_DEMO_MODE && isDemoHome) {
+  sessionStorage.removeItem(SESSION_TOKEN_KEY)
+}
 
 if (IS_DEMO_MODE && demoMatch) {
   const demoToken = demoMatch[1] === 'patient' ? DEMO_PATIENT_TOKEN : DEMO_PROVIDER_TOKEN
