@@ -16,6 +16,7 @@ import { IS_DEMO_MODE } from './demoApi'
 import IntegrationsWorkspace from './IntegrationsWorkspace'
 import MessagesWorkspace from './MessagesWorkspace'
 import Overview from './Overview'
+import PatientJournalWorkspace from './PatientJournalWorkspace'
 import PeopleWorkspace from './PeopleWorkspace'
 import { isProviderRole, TRACK_META } from './platformMeta'
 import PortalWorkspace from './PortalWorkspace'
@@ -26,6 +27,7 @@ const NAV_ITEMS = [
   ['home', 'Overview', 'OV'],
   ['business', 'Business', 'BU'],
   ['calendar', 'Calendar', 'CA'],
+  ['journal', 'Journal', 'JR'],
   ['portal', 'Plans & progress', 'PL'],
   ['messages', 'Messages', 'MS'],
   ['clients', 'People', 'PE'],
@@ -34,12 +36,14 @@ const NAV_ITEMS = [
 ]
 
 const PROVIDER_ONLY_VIEWS = new Set(['business', 'clients', 'integrations', 'audit'])
+const PATIENT_ONLY_VIEWS = new Set(['journal'])
 
 function navLabel(key, defaultLabel, isProvider) {
   if (isProvider) return defaultLabel
   return {
     home: 'Patient home',
     calendar: 'Appointments',
+    journal: 'My journal',
     portal: 'My plans & progress',
     messages: 'My messages',
   }[key] || defaultLabel
@@ -50,6 +54,7 @@ function viewTitle(view) {
     home: 'Overview',
     business: 'Business',
     calendar: 'Calendar',
+    journal: 'Daily Journal',
     portal: 'Plans & progress',
     messages: 'Messages',
     clients: 'People',
@@ -207,6 +212,7 @@ function PlatformWorkspace({ token, user, onLogout }) {
 
   useEffect(() => {
     if (!isProvider && PROVIDER_ONLY_VIEWS.has(view)) setView('home')
+    if (isProvider && PATIENT_ONLY_VIEWS.has(view)) setView('home')
   }, [isProvider, view])
 
   function flash(message) {
@@ -297,7 +303,9 @@ function PlatformWorkspace({ token, user, onLogout }) {
     }
   }
 
-  const visibleNav = NAV_ITEMS.filter(([key]) => isProvider || !PROVIDER_ONLY_VIEWS.has(key))
+  const visibleNav = NAV_ITEMS.filter(([key]) => (
+    isProvider ? !PATIENT_ONLY_VIEWS.has(key) : !PROVIDER_ONLY_VIEWS.has(key)
+  ))
 
   return (
     <div className="app-shell">
@@ -358,6 +366,7 @@ function PlatformWorkspace({ token, user, onLogout }) {
             )}
             {view === 'business' && isProvider && <BusinessWorkspace token={token} />}
             {view === 'calendar' && <CalendarWorkspace token={token} isProvider={isProvider} people={people} />}
+            {view === 'journal' && !isProvider && <PatientJournalWorkspace />}
             {view === 'portal' && (
               <PortalWorkspace
                 isProvider={isProvider}
