@@ -30,7 +30,7 @@ function renderWorkspace(overrides = {}) {
 }
 
 describe('PortalWorkspace specialty selector', () => {
-  it('shows matching providers immediately and prioritizes names that start with the typed text', () => {
+  it('shows only provider names beginning with a one-letter query', () => {
     renderWorkspace()
 
     const search = screen.getByLabelText('Search specialties')
@@ -43,7 +43,23 @@ describe('PortalWorkspace specialty selector', () => {
 
     expect(screen.getByText('Acne Specialist')).toBeInTheDocument()
     expect(screen.getByText('Academic Coach')).toBeInTheDocument()
-    expect(labels[0].startsWith('A')).toBe(true)
+    expect(labels.length).toBeGreaterThan(0)
+    expect(labels.every((label) => label.toLowerCase().startsWith('a'))).toBe(true)
+    expect(screen.queryByText('Data & Analytics Consultant')).not.toBeInTheDocument()
+  })
+
+  it('narrows the visible provider names as more letters are typed', () => {
+    renderWorkspace()
+
+    const search = screen.getByLabelText('Search specialties')
+    fireEvent.focus(search)
+    fireEvent.change(search, { target: { value: 'ac' } })
+
+    const options = within(screen.getByRole('listbox')).getAllByRole('option')
+    const labels = options.map((option) => option.querySelector('strong')?.textContent || '')
+
+    expect(labels.length).toBeGreaterThan(0)
+    expect(labels.every((label) => label.toLowerCase().startsWith('ac'))).toBe(true)
   })
 
   it('offers a General – Provider fallback that switches to the neutral client-plan template', () => {
