@@ -52,7 +52,7 @@ describe('PortalWorkspace specialty selector', () => {
     fireEvent.click(screen.getByRole('button', { name: 'General – Provider' }))
 
     expect(screen.getByRole('heading', { name: 'Client plans' })).toBeInTheDocument()
-    expect(screen.getByText('Client progress plan')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Active client plan', level: 2 })).toBeInTheDocument()
   })
 
   it('links to the complete GitHub provider directory', () => {
