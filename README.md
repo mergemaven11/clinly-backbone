@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> **Proprietary software — copying prohibited.** This source is public for portfolio review and evaluation only. Copying, modification, redistribution, commercial use, rehosting, derivative works, and AI/ML training use are prohibited without prior written permission. See [LICENSE](LICENSE).
+
 # Clinly
 
 **BETA** · Secure provider and patient relationship portal with a React web app and FastAPI + MongoDB backbone.
