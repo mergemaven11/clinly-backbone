@@ -2,7 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { IS_DEMO_MODE } from './demoApi'
 import { formatDate, humanizeKey, TRACK_META } from './platformMeta'
-import { familyForSpecialty, SPECIALTIES, specialtyForKey } from './specialtyCatalog'
+import {
+  familyForSpecialty,
+  matchesSpecialty,
+  SPECIALTIES,
+  specialtyForKey,
+  templatePlansForSpecialty,
+} from './specialtyCatalog'
 
 const DEMO_SPECIALTY_KEY = 'clinly-demo-specialty-v1'
 
@@ -17,7 +23,7 @@ function specialtyTrackMeta(track, specialty) {
     ...base,
     label: specialty.planLabel || base.label,
     eyebrow: family.label,
-    description: `${specialty.planLabel || 'Progress plan'} for ${specialty.label.toLowerCase()} workflows.`,
+    description: track.demoDescription || `${specialty.planLabel || 'Progress plan'} for ${specialty.label.toLowerCase()} workflows.`,
   }
 }
 
@@ -28,7 +34,7 @@ function TrackCard({ track, specialty, selected = false, onClick }) {
       <span className={`track-icon kind-${track.kind.toLowerCase()}`}>{meta.label.slice(0, 1)}</span>
       <span className="track-card-copy">
         <small>{meta.eyebrow}</small>
-        <strong>{track.title}</strong>
+        <strong>{track.demoTitle || track.title}</strong>
         <span>{meta.description}</span>
       </span>
       <span className="chevron">›</span>
@@ -38,37 +44,82 @@ function TrackCard({ track, specialty, selected = false, onClick }) {
 
 function SpecialtySelector({ value, onChange }) {
   const specialty = specialtyForKey(value)
+  const family = familyForSpecialty(value)
   const [query, setQuery] = useState(specialty.label)
+  const [open, setOpen] = useState(false)
 
   useEffect(() => setQuery(specialtyForKey(value).label), [value])
 
-  function commit(nextLabel) {
-    const match = SPECIALTIES.find((item) => item.label.toLowerCase() === nextLabel.trim().toLowerCase())
-    if (!match) return
-    onChange(match.key)
+  const matches = useMemo(
+    () => SPECIALTIES.filter((item) => matchesSpecialty(item, query)).slice(0, 8),
+    [query],
+  )
+
+  function select(item) {
+    setQuery(item.label)
+    setOpen(false)
+    onChange(item.key)
+  }
+
+  function handleChange(event) {
+    const nextQuery = event.target.value
+    setQuery(nextQuery)
+    setOpen(true)
+    const normalized = nextQuery.trim().toLowerCase()
+    const exact = SPECIALTIES.find((item) => [item.label, ...(item.aliases || [])].some((value) => value.toLowerCase() === normalized))
+    if (exact) select(exact)
+  }
+
+  function handleKeyDown(event) {
+    if (event.key === 'Escape') {
+      setOpen(false)
+      return
+    }
+    if (event.key === 'Enter' && open && matches.length) {
+      event.preventDefault()
+      select(matches[0])
+    }
   }
 
   return (
     <div className="specialty-preview-control">
-      <div>
-        <span className="kicker">Preview specialty workspace</span>
-        <strong>{specialty.label}</strong>
+      <div className="specialty-preview-heading">
+        <div>
+          <span className="kicker">Preview specialty workspace</span>
+          <strong>{specialty.label}</strong>
+        </div>
+        <span className="specialty-workspace-name">{family.workspace}</span>
       </div>
-      <label>
-        <span className="sr-only">Search specialties</span>
-        <input
-          list="clinly-specialties"
-          value={query}
-          onChange={(event) => { setQuery(event.target.value); commit(event.target.value) }}
-          onBlur={(event) => commit(event.target.value)}
-          placeholder="Search specialties…"
-          aria-label="Search specialties"
-        />
-        <datalist id="clinly-specialties">
-          {SPECIALTIES.map((item) => <option value={item.label} key={item.key} />)}
-        </datalist>
-      </label>
-      <small>Demo only: switching specialty adapts plan types and terminology in this browser.</small>
+      <div className="specialty-combobox">
+        <label>
+          <span className="sr-only">Search specialties</span>
+          <input
+            value={query}
+            onChange={handleChange}
+            onFocus={() => setOpen(true)}
+            onBlur={() => window.setTimeout(() => setOpen(false), 140)}
+            onKeyDown={handleKeyDown}
+            placeholder="Search specialties…"
+            aria-label="Search specialties"
+            aria-expanded={open}
+            aria-controls="clinly-specialty-results"
+            autoComplete="off"
+          />
+        </label>
+        {open && (
+          <div className="specialty-results" id="clinly-specialty-results" role="listbox">
+            {matches.length ? matches.map((item) => (
+              <button key={item.key} type="button" role="option" aria-selected={item.key === value} onMouseDown={(event) => event.preventDefault()} onClick={() => select(item)}>
+                <span><strong>{item.label}</strong><small>{familyForSpecialty(item.key).label}</small></span>
+                <span>Use template</span>
+              </button>
+            )) : (
+              <div className="specialty-no-results">No matching specialty yet. Try a broader term.</div>
+            )}
+          </div>
+        )}
+      </div>
+      <small>Start typing a profession, then choose a result. The visible plans, terminology, and progress template change immediately.</small>
     </div>
   )
 }
@@ -116,7 +167,7 @@ function TrackCreateForm({ people, specialty, onCreate }) {
         <label>
           Plan type
           <select value={kind} onChange={(event) => setKind(event.target.value)}>
-            {allowedKinds.map((value) => <option value={value} key={value}>{TRACK_META[value]?.label || specialty.planLabel}</option>)}
+            {allowedKinds.map((nextKind) => <option value={nextKind} key={nextKind}>{TRACK_META[nextKind]?.label || specialty.planLabel}</option>)}
           </select>
         </label>
       )}
@@ -243,8 +294,8 @@ function EntryComposer({ track, specialty, onCreate }) {
 
       {(track.kind === 'CARE' || track.kind === 'GENERAL') && (
         <div className="form-grid two">
-          <label>Focus / theme<input value={values.mood} onChange={(event) => set('mood', event.target.value)} placeholder={family.label === 'Rehabilitation' ? 'Mobility, pain, function…' : 'Focus, milestone, outcome…'} /></label>
-          <label>Progress rating 1–5<input type="number" min="1" max="5" value={values.wellbeing_rating} onChange={(event) => set('wellbeing_rating', event.target.value)} /></label>
+          <label>{specialty.focusLabel || 'Focus / theme'}<input value={values.mood} onChange={(event) => set('mood', event.target.value)} placeholder={specialty.focusPlaceholder || (family.label === 'Rehabilitation' ? 'Mobility, pain, function…' : 'Focus, milestone, outcome…')} /></label>
+          <label>{specialty.ratingLabel || 'Progress rating 1–5'}<input type="number" min="1" max="5" value={values.wellbeing_rating} onChange={(event) => set('wellbeing_rating', event.target.value)} /></label>
         </div>
       )}
 
@@ -287,14 +338,24 @@ export default function PortalWorkspace({ isProvider, people, tracks, selectedTr
   const family = familyForSpecialty(specialtyKey)
 
   function changeSpecialty(nextKey) {
+    const nextSpecialty = specialtyForKey(nextKey)
     setSpecialtyKey(nextKey)
     if (IS_DEMO_MODE) window.localStorage.setItem(DEMO_SPECIALTY_KEY, nextKey)
     setShowCreate(false)
+    const firstCompatibleTrack = tracks.find((track) => nextSpecialty.allowedKinds.includes(track.kind))
+    if (firstCompatibleTrack) onSelectTrack(firstCompatibleTrack.id)
   }
 
-  const compatibleTracks = IS_DEMO_MODE
+  const planTemplates = templatePlansForSpecialty(specialtyKey)
+  const compatibleTracks = (IS_DEMO_MODE
     ? tracks.filter((track) => specialty.allowedKinds.includes(track.kind))
     : tracks
+  ).map((track, index) => ({
+    ...track,
+    demoTitle: IS_DEMO_MODE ? planTemplates[index % planTemplates.length] : track.title,
+    demoDescription: IS_DEMO_MODE ? `${family.progress} template for ${specialty.label.toLowerCase()}.` : undefined,
+  }))
+  const activeTrack = compatibleTracks.find((track) => track.id === selectedTrack?.id) || compatibleTracks[0] || null
 
   return (
     <div className="portal-layout specialty-aware-portal">
@@ -309,24 +370,24 @@ export default function PortalWorkspace({ isProvider, people, tracks, selectedTr
         )}
         <div className="track-list">
           {compatibleTracks.map((track) => (
-            <TrackCard key={track.id} track={track} specialty={specialty} selected={track.id === selectedTrack?.id} onClick={() => onSelectTrack(track.id)} />
+            <TrackCard key={track.id} track={track} specialty={specialty} selected={track.id === activeTrack?.id} onClick={() => onSelectTrack(track.id)} />
           ))}
         </div>
         {!compatibleTracks.length && <Empty title={`No ${String(specialty.planPlural || 'plans').toLowerCase()} yet`} detail={isProvider ? `Create a ${String(specialty.planLabel || 'plan').toLowerCase()} designed for ${specialty.label.toLowerCase()} workflows.` : 'Nothing has been shared with you yet.'} />}
       </section>
 
       <section className="journal-panel section-card">
-        {selectedTrack && (!IS_DEMO_MODE || specialty.allowedKinds.includes(selectedTrack.kind)) ? (
+        {activeTrack ? (
           <>
             <div className="journal-header">
               <div>
                 <span className="kicker">{family.progress}</span>
-                <h2>{selectedTrack.title}</h2>
-                <p>{specialtyTrackMeta(selectedTrack, specialty).description}</p>
+                <h2>{activeTrack.demoTitle || activeTrack.title}</h2>
+                <p>{specialtyTrackMeta(activeTrack, specialty).description}</p>
               </div>
               <span className="privacy-chip compact"><span />Protected</span>
             </div>
-            <EntryComposer track={selectedTrack} specialty={specialty} onCreate={onCreateEntry} />
+            <EntryComposer track={activeTrack} specialty={specialty} onCreate={onCreateEntry} />
             <div className="timeline">
               {entries.map((entry) => <EntryCard key={entry.id} entry={entry} />)}
               {!entries.length && <Empty title="No updates yet" detail={`Use the ${family.progress.toLowerCase()} form above to start the timeline.`} />}
