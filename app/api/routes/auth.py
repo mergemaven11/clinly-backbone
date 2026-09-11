@@ -21,6 +21,7 @@ from app.models.users import (
     UserRole,
 )
 from app.services.audit import log_audit_event
+from app.services.mfa import MfaSecretCipher, recovery_code_digest, verify_totp
 from app.services.rate_limit import LoginRateLimiter
 from app.services.security import create_access_token, hash_password, verify_password
 
@@ -104,6 +105,120 @@ def _issue_session(
     return access_token
 
 
+def _verify_login_mfa(
+    database: Database,
+    *,
+    user: dict[str, Any],
+    code: str | None,
+    request: Request,
+    limiter: LoginRateLimiter,
+    ip_address: str,
+    settings: Settings,
+) -> str | None:
+    """Require and consume the account's second factor before session issuance."""
+    if not user.get("mfa_enabled"):
+        return None
+
+    user_id = str(user["_id"])
+    if not code or not code.strip():
+        log_audit_event(
+            database,
+            action="LOGIN_FAILURE",
+            success=False,
+            actor_user_id=user_id,
+            subject_user_id=user_id,
+            resource_type="user",
+            resource_id=user_id,
+            request=request,
+            metadata={"reason": "mfa_required", "route": "/auth/login"},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="MFA code required",
+            headers={"X-MFA-Required": "true"},
+        )
+
+    ciphertext = user.get("mfa_secret_ciphertext")
+    if not ciphertext:
+        log_audit_event(
+            database,
+            action="MFA_CONFIGURATION_ERROR",
+            success=False,
+            actor_user_id=user_id,
+            subject_user_id=user_id,
+            resource_type="user",
+            resource_id=user_id,
+            request=request,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account security configuration is invalid",
+        )
+
+    try:
+        cipher = MfaSecretCipher(settings.message_encryption_key.get_secret_value())
+        secret = cipher.decrypt(ciphertext)
+    except RuntimeError as exc:
+        log_audit_event(
+            database,
+            action="MFA_CONFIGURATION_ERROR",
+            success=False,
+            actor_user_id=user_id,
+            subject_user_id=user_id,
+            resource_type="user",
+            resource_id=user_id,
+            request=request,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account security configuration is invalid",
+        ) from exc
+
+    counter = verify_totp(secret, code)
+    if counter is not None:
+        result = database.users.update_one(
+            {
+                "_id": user["_id"],
+                "$or": [
+                    {"mfa_last_counter": {"$lt": counter}},
+                    {"mfa_last_counter": {"$exists": False}},
+                    {"mfa_last_counter": None},
+                ],
+            },
+            {"$set": {"mfa_last_counter": counter}},
+        )
+        if result.modified_count == 1:
+            return "totp"
+
+    recovery_digest = recovery_code_digest(
+        code,
+        pepper=settings.jwt_secret.get_secret_value(),
+    )
+    recovery_result = database.users.update_one(
+        {"_id": user["_id"], "mfa_recovery_digests": recovery_digest},
+        {"$pull": {"mfa_recovery_digests": recovery_digest}},
+    )
+    if recovery_result.modified_count == 1:
+        return "recovery"
+
+    limiter.record_failure(email=user["email"], ip_address=ip_address)
+    log_audit_event(
+        database,
+        action="LOGIN_FAILURE",
+        success=False,
+        actor_user_id=user_id,
+        subject_user_id=user_id,
+        resource_type="user",
+        resource_id=user_id,
+        request=request,
+        metadata={"reason": "invalid_mfa", "route": "/auth/login"},
+    )
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid MFA code",
+    )
+
+
 @router.post(
     "/signup-therapist",
     response_model=UserResponse,
@@ -145,8 +260,8 @@ def signup_therapist(
     response_model=TokenResponse,
     summary="Authenticate and issue an access token",
     responses={
-        401: {"description": "Invalid credentials"},
-        403: {"description": "Account is disabled"},
+        401: {"description": "Invalid credentials or MFA code"},
+        403: {"description": "Account is disabled or security configuration is invalid"},
         422: {"description": "Request validation failed"},
         429: {"description": "Too many login attempts"},
     },
@@ -206,9 +321,29 @@ def login(
         )
 
     settings = get_settings()
+    mfa_factor = _verify_login_mfa(
+        database,
+        user=user,
+        code=payload.mfa_code,
+        request=request,
+        limiter=limiter,
+        ip_address=ip_address,
+        settings=settings,
+    )
     access_token = _issue_session(database, user=user, settings=settings)
     limiter.reset_identity(email=payload.email)
     request.state.actor_user_id = user_id
+    if mfa_factor == "recovery":
+        log_audit_event(
+            database,
+            action="MFA_RECOVERY_USED",
+            success=True,
+            actor_user_id=user_id,
+            subject_user_id=user_id,
+            resource_type="user",
+            resource_id=user_id,
+            request=request,
+        )
     log_audit_event(
         database,
         action="LOGIN_SUCCESS",
@@ -217,6 +352,7 @@ def login(
         resource_type="user",
         resource_id=user_id,
         request=request,
+        metadata={"mfa_factor": mfa_factor} if mfa_factor else None,
     )
     return TokenResponse(
         access_token=access_token,
