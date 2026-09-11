@@ -1,0 +1,41 @@
+.security-workspace {
+  max-width: 920px;
+}
+
+.security-code-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.security-code-grid code,
+.security-secret {
+  display: block;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border, rgba(148, 163, 184, 0.28));
+  border-radius: 10px;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+}
+
+.security-secret {
+  margin-top: 0.4rem;
+  user-select: all;
+}
+
+.security-workspace .status-pill {
+  display: inline-flex;
+  align-items: center;
+  margin: 0.25rem 0 0.75rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.security-workspace .danger-zone {
+  border-style: dashed;
+}
