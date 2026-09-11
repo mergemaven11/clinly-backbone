@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 
 import App from './AppV3.jsx'
 import DocsPage from './DocsPage.jsx'
+import SessionTimeoutGuard from './SessionTimeoutGuard.jsx'
 import { SESSION_TOKEN_KEY, clearSessionToken } from './brand'
 import { DEMO_PATIENT_TOKEN, DEMO_PROVIDER_TOKEN, IS_DEMO_MODE } from './demoApi'
 import './registerExpandedSpecialties'
@@ -25,6 +26,7 @@ if (IS_DEMO_MODE && demoMatch) {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
+    {!isDocsRoute && <SessionTimeoutGuard />}
     {isDocsRoute ? <DocsPage /> : <App />}
   </StrictMode>,
 )
