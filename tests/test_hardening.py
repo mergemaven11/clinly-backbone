@@ -85,7 +85,7 @@ def _prod_settings(**overrides) -> Settings:
     values = {
         "APP_ENV": "prod",
         "LOG_LEVEL": "INFO",
-        "MONGO_URI": "mongodb://internal-mongo:27017/clinly",
+        "MONGO_URI": "mongodb://internal-mongo:27017/clinly?tls=true",
         "JWT_SECRET": "p" * 48,
         "MESSAGE_ENCRYPTION_KEY": "_T2oX4z8Q_Ao1mmWS1K5W9asYzXk8YoYRmR7pP9oDC0=",
         "CORS_ALLOWED_ORIGINS": ["https://clinly.example"],
