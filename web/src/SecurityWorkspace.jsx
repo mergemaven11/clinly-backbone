@@ -19,7 +19,9 @@ function RecoveryCodes({ codes }) {
 export default function SecurityWorkspace({ token }) {
   const [status, setStatus] = useState(null)
   const [setup, setSetup] = useState(null)
-  const [code, setCode] = useState('')
+  const [setupCode, setSetupCode] = useState('')
+  const [recoveryFactor, setRecoveryFactor] = useState('')
+  const [disableCode, setDisableCode] = useState('')
   const [password, setPassword] = useState('')
   const [recoveryCodes, setRecoveryCodes] = useState([])
   const [busy, setBusy] = useState(false)
@@ -58,11 +60,11 @@ export default function SecurityWorkspace({ token }) {
       const result = await apiRequest('/auth/mfa/confirm', {
         token,
         method: 'POST',
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code: setupCode }),
       })
       setRecoveryCodes(result.recovery_codes)
       setSetup(null)
-      setCode('')
+      setSetupCode('')
       setNotice('Authenticator MFA is enabled. Other signed-in devices were revoked.')
       await loadStatus()
     } catch (requestError) {
@@ -81,10 +83,10 @@ export default function SecurityWorkspace({ token }) {
       const result = await apiRequest('/auth/mfa/recovery-codes', {
         token,
         method: 'POST',
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code: recoveryFactor }),
       })
       setRecoveryCodes(result.recovery_codes)
-      setCode('')
+      setRecoveryFactor('')
       setNotice('Previous recovery codes were invalidated and replaced.')
       await loadStatus()
     } catch (requestError) {
@@ -103,9 +105,9 @@ export default function SecurityWorkspace({ token }) {
       await apiRequest('/auth/mfa/disable', {
         token,
         method: 'POST',
-        body: JSON.stringify({ code, password }),
+        body: JSON.stringify({ code: disableCode, password }),
       })
-      setCode('')
+      setDisableCode('')
       setPassword('')
       setNotice('Authenticator MFA was disabled. Other signed-in devices were revoked.')
       await loadStatus()
@@ -155,8 +157,8 @@ export default function SecurityWorkspace({ token }) {
             <input
               inputMode="numeric"
               autoComplete="one-time-code"
-              value={code}
-              onChange={(event) => setCode(event.target.value)}
+              value={setupCode}
+              onChange={(event) => setSetupCode(event.target.value)}
               minLength={6}
               maxLength={6}
               required
@@ -176,7 +178,7 @@ export default function SecurityWorkspace({ token }) {
             <p className="muted">Enter a current authenticator or recovery code. Replacing codes immediately invalidates every previous recovery code.</p>
             <label>
               Current MFA code
-              <input value={code} onChange={(event) => setCode(event.target.value)} autoComplete="one-time-code" required />
+              <input value={recoveryFactor} onChange={(event) => setRecoveryFactor(event.target.value)} autoComplete="one-time-code" required />
             </label>
             <button className="secondary-button" type="submit" disabled={busy}>Generate new recovery codes</button>
           </form>
@@ -191,7 +193,7 @@ export default function SecurityWorkspace({ token }) {
             </label>
             <label>
               Current MFA code
-              <input value={code} onChange={(event) => setCode(event.target.value)} autoComplete="one-time-code" required />
+              <input value={disableCode} onChange={(event) => setDisableCode(event.target.value)} autoComplete="one-time-code" required />
             </label>
             <button className="secondary-button" type="submit" disabled={busy}>Disable MFA</button>
           </form>
