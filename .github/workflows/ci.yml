@@ -4,8 +4,13 @@ on:
   push:
     branches:
       - main
-      - "agent/**"
   pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -131,6 +136,33 @@ jobs:
 
       - name: Build production web image
         run: docker build --tag clinly-web:ci web
+
+  production-config:
+    runs-on: ubuntu-latest
+    env:
+      MONGO_URI: mongodb+srv://ci-user:ci-password@cluster.example/clinly
+      MONGO_DB_NAME: clinly
+      JWT_SECRET: ci-production-shape-only-secret-12345678901234567890
+      MESSAGE_ENCRYPTION_KEY: _T2oX4z8Q_Ao1mmWS1K5W9asYzXk8YoYRmR7pP9oDC0=
+      CORS_ALLOWED_ORIGINS: '["https://app.example.com"]'
+      APP_DISPLAY_NAME: Clinly
+      APP_TAGLINE: One relationship. One connected place.
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Validate production Compose configuration
+        run: docker compose -f docker-compose.production.yml config --quiet
+
+      - name: Verify production topology does not publish the API
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose -f docker-compose.production.yml config > production-compose.rendered.yml
+          if grep -A12 '^  api:' production-compose.rendered.yml | grep -q '^    ports:'; then
+            echo 'Production API must remain private behind the web gateway.' >&2
+            exit 1
+          fi
 
   stack-smoke:
     runs-on: ubuntu-latest

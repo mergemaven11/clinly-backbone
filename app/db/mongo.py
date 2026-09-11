@@ -1,4 +1,4 @@
-"""Document this first-party Python module."""
+"""MongoDB connection and index initialization."""
 from __future__ import annotations
 
 import logging
@@ -21,14 +21,7 @@ class MongoConnector:
         connect_timeout_ms: int = 3000,
         server_selection_timeout_ms: int = 3000,
     ) -> None:
-        """Initialize the instance.
-
-        Args:
-            uri: Function argument.
-            db_name: Function argument.
-            connect_timeout_ms: Function argument.
-            server_selection_timeout_ms: Function argument.
-        """
+        """Initialize the connector without forcing network I/O."""
         self._uri = uri
         self._db_name = db_name
         self._connect_timeout_ms = connect_timeout_ms
@@ -72,6 +65,15 @@ class MongoConnector:
         database.users.create_index(
             [("therapist_id", ASCENDING)],
             name="ix_users_therapist_id",
+        )
+        database.auth_sessions.create_index(
+            [("user_id", ASCENDING), ("revoked_at", ASCENDING), ("expires_at", ASCENDING)],
+            name="ix_auth_sessions_user_state_expiry",
+        )
+        database.auth_sessions.create_index(
+            [("expires_at", ASCENDING)],
+            expireAfterSeconds=0,
+            name="ttl_auth_sessions_expires_at",
         )
         database.conversations.create_index(
             [("therapist_id", ASCENDING), ("client_id", ASCENDING)],

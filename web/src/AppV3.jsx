@@ -22,6 +22,7 @@ import { isProviderRole, TRACK_META } from './platformMeta'
 import PortalWorkspace from './PortalWorkspace'
 import PublicBookingPage from './PublicBookingPage'
 import PublicProviderPage from './PublicProviderPage'
+import SecurityWorkspace from './SecurityWorkspace'
 
 const NAV_ITEMS = [
   ['home', 'Overview', 'OV'],
@@ -32,6 +33,7 @@ const NAV_ITEMS = [
   ['messages', 'Messages', 'MS'],
   ['clients', 'People', 'PE'],
   ['integrations', 'Integrations', 'IN'],
+  ['security', 'Security', 'SE'],
   ['audit', 'Activity log', 'AL'],
 ]
 
@@ -59,6 +61,7 @@ function viewTitle(view) {
     messages: 'Messages',
     clients: 'People',
     integrations: 'Integrations',
+    security: 'Security',
     audit: 'Activity log',
   }[view] || APP_NAME
 }
@@ -417,6 +420,7 @@ function PlatformWorkspace({ token, user, onLogout }) {
               />
             )}
             {view === 'integrations' && isProvider && <IntegrationsWorkspace token={token} />}
+            {view === 'security' && <SecurityWorkspace token={token} />}
             {view === 'audit' && isProvider && <AuditWorkspace token={token} people={people} />}
           </>
         )}

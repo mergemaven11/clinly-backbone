@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from typing import Literal
+from urllib.parse import parse_qs, urlsplit
 
 from pydantic import AliasChoices, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -95,6 +96,24 @@ class Settings(BaseSettings):
             raise ValueError("Wildcard CORS origins are not allowed in production")
         if any(not origin.startswith("https://") for origin in self.cors_allowed_origins):
             raise ValueError("Production CORS origins must use HTTPS")
+
+        mongo = urlsplit(self.mongo_uri)
+        query = {
+            key.lower(): [item.lower() for item in values]
+            for key, values in parse_qs(mongo.query, keep_blank_values=True).items()
+        }
+        tls_values = query.get("tls", []) + query.get("ssl", [])
+        explicitly_disabled = any(value in {"false", "0", "no"} for value in tls_values)
+        explicitly_enabled = any(value in {"true", "1", "yes"} for value in tls_values)
+
+        if mongo.scheme == "mongodb+srv":
+            if explicitly_disabled:
+                raise ValueError("Production MongoDB transport encryption cannot be disabled")
+        elif mongo.scheme == "mongodb":
+            if not explicitly_enabled:
+                raise ValueError("Production mongodb:// connections must enable TLS")
+        else:
+            raise ValueError("MONGO_URI must use mongodb:// or mongodb+srv://")
 
         return self
 

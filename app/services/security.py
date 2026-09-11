@@ -1,8 +1,9 @@
-"""Document this first-party Python module."""
+"""Security primitives for passwords and access tokens."""
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from uuid import uuid4
 
 import bcrypt
 import jwt
@@ -14,14 +15,7 @@ BCRYPT_MAX_PASSWORD_BYTES = 72
 
 
 def _password_bytes(password: str) -> bytes:
-    """Handle password bytes.
-
-    Args:
-        password: Function argument.
-
-    Returns:
-        Function result.
-    """
+    """Encode a password and enforce bcrypt's byte limit."""
     encoded = password.encode("utf-8")
     if len(encoded) > BCRYPT_MAX_PASSWORD_BYTES:
         raise ValueError("password exceeds bcrypt's 72-byte limit")
@@ -54,22 +48,14 @@ def create_access_token(
     role: str,
     secret: str,
     expires_minutes: int,
+    session_id: str | None = None,
 ) -> str:
-    """Handle create access token.
-
-    Args:
-        subject: Function argument.
-        role: Function argument.
-        secret: Function argument.
-        expires_minutes: Function argument.
-
-    Returns:
-        Function result.
-    """
+    """Create a signed access token with a unique revocable session ID."""
     now = datetime.now(timezone.utc)
     payload: dict[str, Any] = {
         "sub": subject,
         "role": role,
+        "jti": session_id or str(uuid4()),
         "iat": now,
         "exp": now + timedelta(minutes=expires_minutes),
     }
@@ -84,6 +70,6 @@ def decode_access_token(token: str, *, secret: str) -> dict[str, Any]:
     response.
     """
     payload = jwt.decode(token, secret, algorithms=[JWT_ALGORITHM])
-    if not payload.get("sub") or not payload.get("role"):
+    if not payload.get("sub") or not payload.get("role") or not payload.get("jti"):
         raise InvalidTokenError("token missing required claims")
     return payload
