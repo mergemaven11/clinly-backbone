@@ -121,7 +121,6 @@ export default function AuthPage({ onToken }) {
                 value={mfaCode}
                 onChange={(event) => setMfaCode(event.target.value)}
                 autoComplete="one-time-code"
-                inputMode="numeric"
                 placeholder="Only required when MFA is enabled"
                 maxLength={64}
               />
