@@ -1,8 +1,9 @@
-"""Document this first-party Python module."""
+"""Authentication and legacy account routes."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
+from uuid import uuid4
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -10,7 +11,7 @@ from pymongo.database import Database
 from pymongo.errors import DuplicateKeyError
 
 from app.api.dependencies import get_current_user, get_database
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.models.users import (
     ClientCreate,
     LoginRequest,
@@ -27,14 +28,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 def _serialize_user(user: dict[str, Any]) -> UserResponse:
-    """Handle serialize user.
-
-    Args:
-        user: Function argument.
-
-    Returns:
-        Function result.
-    """
+    """Serialize a stored user to the legacy public response model."""
     therapist_id = user.get("therapist_id")
     return UserResponse(
         id=str(user["_id"]),
@@ -53,18 +47,7 @@ def _insert_user(
     role: UserRole,
     therapist_id: ObjectId | None = None,
 ) -> dict[str, Any]:
-    """Handle insert user.
-
-    Args:
-        database: Function argument.
-        email: Function argument.
-        password: Function argument.
-        role: Function argument.
-        therapist_id: Function argument.
-
-    Returns:
-        Function result.
-    """
+    """Insert one user with a freshly hashed password."""
     document: dict[str, Any] = {
         "email": email,
         "password_hash": hash_password(password),
@@ -86,17 +69,39 @@ def _insert_user(
 
 
 def _client_ip(request: Request) -> str:
-    """Handle client ip.
-
-    Args:
-        request: Function argument.
-
-    Returns:
-        Function result.
-    """
+    """Return the source address visible to the application server."""
     if request.client is None:
         return "unknown"
     return request.client.host
+
+
+def _issue_session(
+    database: Database,
+    *,
+    user: dict[str, Any],
+    settings: Settings,
+) -> str:
+    """Create a server-side session record and its signed bearer token."""
+    created_at = datetime.now(timezone.utc)
+    expires_at = created_at + timedelta(minutes=settings.jwt_access_token_minutes)
+    session_id = str(uuid4())
+    access_token = create_access_token(
+        subject=str(user["_id"]),
+        role=user["role"],
+        secret=settings.jwt_secret.get_secret_value(),
+        expires_minutes=settings.jwt_access_token_minutes,
+        session_id=session_id,
+    )
+    database.auth_sessions.insert_one(
+        {
+            "_id": session_id,
+            "user_id": user["_id"],
+            "created_at": created_at,
+            "expires_at": expires_at,
+            "revoked_at": None,
+        }
+    )
+    return access_token
 
 
 @router.post(
@@ -114,16 +119,7 @@ def signup_therapist(
     request: Request,
     database: Database = Depends(get_database),
 ) -> UserResponse:
-    """Handle signup therapist.
-
-    Args:
-        payload: Function argument.
-        request: Function argument.
-        database: Function argument.
-
-    Returns:
-        Function result.
-    """
+    """Create a legacy therapist account."""
     user = _insert_user(
         database,
         email=payload.email,
@@ -160,16 +156,7 @@ def login(
     request: Request,
     database: Database = Depends(get_database),
 ) -> TokenResponse:
-    """Handle login.
-
-    Args:
-        payload: Function argument.
-        request: Function argument.
-        database: Function argument.
-
-    Returns:
-        Function result.
-    """
+    """Authenticate credentials and create a revocable server-side session."""
     limiter: LoginRateLimiter = request.app.state.login_rate_limiter
     ip_address = _client_ip(request)
     decision = limiter.check(email=payload.email, ip_address=ip_address)
@@ -219,12 +206,7 @@ def login(
         )
 
     settings = get_settings()
-    access_token = create_access_token(
-        subject=user_id,
-        role=user["role"],
-        secret=settings.jwt_secret.get_secret_value(),
-        expires_minutes=settings.jwt_access_token_minutes,
-    )
+    access_token = _issue_session(database, user=user, settings=settings)
     limiter.reset_identity(email=payload.email)
     request.state.actor_user_id = user_id
     log_audit_event(
@@ -242,24 +224,48 @@ def login(
     )
 
 
+@router.post(
+    "/logout",
+    summary="Revoke the current authenticated session",
+    responses={401: {"description": "Missing, invalid, expired, or revoked token"}},
+)
+def logout(
+    request: Request,
+    database: Database = Depends(get_database),
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, str]:
+    """Immediately revoke the caller's active bearer-token session."""
+    session_id = request.state.auth_session_id
+    revoked_at = datetime.now(timezone.utc)
+    database.auth_sessions.update_one(
+        {"_id": session_id, "user_id": current_user["_id"], "revoked_at": None},
+        {"$set": {"revoked_at": revoked_at}},
+    )
+    actor_id = str(current_user["_id"])
+    log_audit_event(
+        database,
+        action="LOGOUT",
+        success=True,
+        actor_user_id=actor_id,
+        subject_user_id=actor_id,
+        resource_type="auth_session",
+        resource_id=session_id,
+        request=request,
+    )
+    return {"status": "signed_out"}
+
+
 @router.get(
     "/me",
     response_model=UserResponse,
     summary="Return the authenticated user",
     responses={
-        401: {"description": "Missing, invalid, or expired access token"},
+        401: {"description": "Missing, invalid, expired, or revoked access token"},
         403: {"description": "Account is disabled"},
     },
 )
 def me(current_user: dict[str, Any] = Depends(get_current_user)) -> UserResponse:
-    """Handle me.
-
-    Args:
-        current_user: Function argument.
-
-    Returns:
-        Function result.
-    """
+    """Return the authenticated legacy user."""
     return _serialize_user(current_user)
 
 
@@ -269,7 +275,7 @@ def me(current_user: dict[str, Any] = Depends(get_current_user)) -> UserResponse
     status_code=status.HTTP_201_CREATED,
     summary="Create a client owned by the authenticated therapist",
     responses={
-        401: {"description": "Missing, invalid, or expired access token"},
+        401: {"description": "Missing, invalid, expired, or revoked access token"},
         403: {"description": "Therapist role is required"},
         409: {"description": "Email is already registered"},
         422: {"description": "Request validation failed"},
@@ -281,17 +287,7 @@ def create_client(
     database: Database = Depends(get_database),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> UserResponse:
-    """Handle create client.
-
-    Args:
-        payload: Function argument.
-        request: Function argument.
-        database: Function argument.
-        current_user: Function argument.
-
-    Returns:
-        Function result.
-    """
+    """Create a client owned by the authenticated therapist."""
     actor_id = str(current_user["_id"])
     if current_user["role"] != UserRole.THERAPIST.value:
         log_audit_event(
