@@ -17,6 +17,7 @@ from app.api.routes.booking_services import router as booking_services_router
 from app.api.routes.conversations import router as conversations_router
 from app.api.routes.integrations import router as integrations_router
 from app.api.routes.messages import router as messages_router
+from app.api.routes.mfa import router as mfa_router
 from app.api.routes.portal import router as portal_router
 from app.api.routes.provider_business import router as provider_business_router
 from app.api.routes.providers import router as providers_router
@@ -91,6 +92,7 @@ if settings.cors_allowed_origins:
     )
 
 app.include_router(auth_router)
+app.include_router(mfa_router)
 app.include_router(providers_router)
 app.include_router(provider_business_router)
 app.include_router(scheduling_router)
