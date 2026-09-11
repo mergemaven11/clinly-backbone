@@ -78,8 +78,9 @@ class ClientCreate(ParticipantCreate):
 
 
 class LoginRequest(Credentials):
-    """Represent LoginRequest."""
-    pass
+    """Credentials plus an optional authenticator or recovery code."""
+
+    mfa_code: str | None = Field(default=None, min_length=6, max_length=64)
 
 
 class UserResponse(BaseModel):
