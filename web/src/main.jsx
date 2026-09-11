@@ -10,6 +10,7 @@ import './registerExpandedSpecialties'
 import './styles.css'
 import './platform-v3.css'
 import './business-layout-v2.css'
+import './security.css'
 
 const isDocsRoute = /^\/docs\/?$/.test(window.location.pathname)
 const isDemoHome = /^\/demo\/?$/.test(window.location.pathname)
