@@ -8,6 +8,7 @@ export default function AuthPage({ onToken }) {
   const [mode, setMode] = useState('login')
   const [email, setEmail] = useState(IS_DEMO_MODE ? DEMO_PROVIDER_EMAIL : '')
   const [password, setPassword] = useState(IS_DEMO_MODE ? DEMO_PASSWORD : '')
+  const [mfaCode, setMfaCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -22,9 +23,11 @@ export default function AuthPage({ onToken }) {
           body: JSON.stringify({ email, password }),
         })
       }
+      const loginPayload = { email, password }
+      if (mfaCode.trim()) loginPayload.mfa_code = mfaCode.trim()
       const login = await apiRequest('/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(loginPayload),
       })
       onToken(login.access_token)
     } catch (requestError) {
@@ -111,6 +114,19 @@ export default function AuthPage({ onToken }) {
             Password
             <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
           </label>
+          {!IS_DEMO_MODE && mode === 'login' && (
+            <label>
+              Authenticator or recovery code
+              <input
+                value={mfaCode}
+                onChange={(event) => setMfaCode(event.target.value)}
+                autoComplete="one-time-code"
+                inputMode="numeric"
+                placeholder="Only required when MFA is enabled"
+                maxLength={64}
+              />
+            </label>
+          )}
 
           {error && <div className="notice error">{error}</div>}
 
@@ -118,7 +134,7 @@ export default function AuthPage({ onToken }) {
             {busy ? 'Working…' : mode === 'login' ? 'Sign in' : 'Create account'}
           </button>
           {!IS_DEMO_MODE && (
-            <button className="text-button" type="button" onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }}>
+            <button className="text-button" type="button" onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setMfaCode(''); setError('') }}>
               {mode === 'login' ? 'I need a provider account' : 'I already have an account'}
             </button>
           )}
