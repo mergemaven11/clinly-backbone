@@ -24,6 +24,17 @@ export function readSessionToken() {
 }
 
 export function clearSessionToken() {
+  const current = sessionStorage.getItem(SESSION_TOKEN_KEY)
+  if (current && !current.startsWith('clinly-demo-')) {
+    fetch('/api/auth/logout', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${current}` },
+      keepalive: true,
+    }).catch(() => {
+      // Local sign-out must still complete if the API is unreachable.
+    })
+  }
+
   sessionStorage.removeItem(SESSION_TOKEN_KEY)
   for (const legacyKey of LEGACY_SESSION_TOKEN_KEYS) sessionStorage.removeItem(legacyKey)
 }
